@@ -1,0 +1,33 @@
+# Ambientes
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# Testes / cache
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Dados e resultados pesados (versionar so o codigo)
+data/raw/*
+data/processed/*
+!data/**/.gitkeep
+results/**
+!results/**/
+!results/**/.gitkeep
+
+# Sistema / editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/settings.json
+
+# Segredos
+.env
+*.key

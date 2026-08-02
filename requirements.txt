@@ -1,0 +1,20 @@
+# --- Núcleo quântico ---
+pennylane>=0.45
+
+# --- Numérico / ML clássico ---
+numpy>=1.26
+scipy>=1.13
+scikit-learn>=1.5
+pandas>=2.2
+
+# --- Visualização ---
+matplotlib>=3.9
+seaborn>=0.13
+
+# --- Notebooks ---
+jupyterlab>=4.2
+ipykernel>=6.29
+
+# --- Qualidade de código e testes ---
+pytest>=8.2
+ruff>=0.5
