@@ -3,6 +3,23 @@ name = "tccqml"
 version = "0.1.0"
 description = "TCC - Quantum Machine Learning"
 requires-python = ">=3.11"
+dependencies = [
+    "pennylane>=0.45",
+    "numpy>=1.26",
+    "scipy>=1.13",
+    "scikit-learn>=1.5",
+    "pandas>=2.2",
+    "matplotlib>=3.9",
+    "seaborn>=0.13",
+]
+
+# Extras opcionais: `pip install -e ".[dev]"` para desenvolver, `[notebooks]` para os .ipynb.
+[project.optional-dependencies]
+dev = ["pytest>=8.2", "ruff>=0.5"]
+notebooks = ["jupyterlab>=4.2", "ipykernel>=6.29"]
+
+[project.scripts]
+tccqml = "tccqml.cli:main"
 
 [build-system]
 requires = ["setuptools>=68"]

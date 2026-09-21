@@ -14,13 +14,16 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 
-# Dados e resultados pesados (versionar so o codigo)
-data/raw/*
-data/processed/*
-!data/**/.gitkeep
+# Resultados pesados (versionar so o codigo). Nao ha pasta de dados: os tres
+# datasets sao sinteticos e nascem de uma semente, em memoria.
 results/**
 !results/**/
 !results/**/.gitkeep
+
+# Texto do TCC (PDFs pesados) e documentos de processo: servem para PRODUZIR o
+# trabalho, nao para quem clona e quer rodar. Ficam so na maquina do autor.
+docs/*
+!docs/.gitkeep
 
 # Sistema / editor
 .DS_Store
