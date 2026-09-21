@@ -1,4 +1,4 @@
-"""Datasets clássicos usados nos experimentos de codificação (Etapa 7)."""
+"""Datasets clássicos usados nos experimentos de codificação."""
 
 from dataclasses import dataclass
 
@@ -6,6 +6,8 @@ import numpy as np
 from sklearn.datasets import make_circles, make_moons
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
+
+from tccqml.config import PADRAO
 
 
 @dataclass
@@ -27,12 +29,8 @@ class Dataset:
         """Rótulos em {-1, +1}, que é a imagem natural de <Z>."""
         return 2 * self.y_train - 1
 
-    @property
-    def y_test_pm1(self) -> np.ndarray:
-        return 2 * self.y_test - 1
 
-
-def make_xor(n_samples: int = 200, noise: float = 0.15, seed: int = 42):
+def make_xor(n_samples: int = PADRAO.n_samples, noise: float = PADRAO.noise, seed: int = 42):
     """XOR: duas classes em quadrantes opostos. Não separável linearmente."""
     rng = np.random.default_rng(seed)
     X = rng.uniform(-1.0, 1.0, size=(n_samples, 2))
@@ -45,18 +43,18 @@ _GENERATORS = {
     "xor": lambda n, noise, seed: make_xor(n, noise, seed),
     "moons": lambda n, noise, seed: make_moons(n_samples=n, noise=noise, random_state=seed),
     "circles": lambda n, noise, seed: make_circles(
-        n_samples=n, noise=noise, factor=0.4, random_state=seed
+        n_samples=n, noise=noise, factor=PADRAO.circles_factor, random_state=seed
     ),
 }
 
 
 def load_dataset(
     name: str,
-    n_samples: int = 200,
-    noise: float = 0.15,
-    test_size: float = 0.3,
-    seed: int = 42,
-    feature_range: tuple[float, float] = (0.0, np.pi),
+    n_samples: int = PADRAO.n_samples,
+    noise: float = PADRAO.noise,
+    test_size: float = PADRAO.test_size,
+    seed: int = PADRAO.seed,
+    feature_range: tuple[float, float] = PADRAO.feature_range,
 ) -> Dataset:
     """Gera, divide e normaliza um dataset sintético.
 
@@ -66,6 +64,9 @@ def load_dataset(
     O intervalo padrão [0, pi] é pensado para angle encoding: RY(theta)
     percorre <Z> de +1 a -1 nesse trecho sem dar a volta, então dois
     valores distintos de entrada nunca caem no mesmo estado.
+
+    Os valores padrão vêm de `config.Protocolo` — o protocolo mora num lugar
+    só, e o N = 300 da Seção 2.5.7 é o que de fato roda.
     """
     if name not in _GENERATORS:
         raise ValueError(f"dataset desconhecido: {name!r}. Opções: {sorted(_GENERATORS)}")
