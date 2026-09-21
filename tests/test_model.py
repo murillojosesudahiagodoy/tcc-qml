@@ -53,7 +53,7 @@ def test_contagem_de_parametros_bate_com_o_ansatz():
 
 
 def test_p_do_circuito_nao_inclui_o_vies():
-    """A ambiguidade que a T0 resolveu.
+    """A ambiguidade entre os dois contadores de parâmetros.
 
     O `p` das Tabelas 2 e 3 e das Eqs. 2.47/2.48 é 12 na configuração de
     referência: só o circuito. O viés é somado depois da medição e sua derivada

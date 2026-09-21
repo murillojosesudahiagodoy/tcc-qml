@@ -1,4 +1,4 @@
-"""Linha de comando do projeto (T13).
+"""Linha de comando do projeto.
 
 Trocar de codificação deixa de exigir caçar strings no notebook:
 

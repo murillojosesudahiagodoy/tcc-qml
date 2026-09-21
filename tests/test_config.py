@@ -1,4 +1,4 @@
-"""Testes do protocolo experimental (T13).
+"""Testes do protocolo experimental.
 
 O protocolo é a fonte fiel para escrever o Capítulo 3. Estes testes garantem
 que o que está escrito lá é o que de fato roda.
@@ -12,7 +12,7 @@ from tccqml.embeddings import ENCODINGS
 
 
 def test_n_samples_bate_com_a_secao_2_5_7():
-    """A divergência que a T13 fechou: o código dizia 200, o texto diz 300."""
+    """A divergência que o config.py fechou: o código dizia 200, o texto diz 300."""
     assert PADRAO.n_samples == 300
 
 
@@ -38,7 +38,7 @@ def test_ansatz_congelado_no_protocolo():
 
 
 def test_grade_so_referencia_codificacoes_registradas():
-    """Se a grade citasse um nome não registrado, a T6 quebraria no meio."""
+    """Se a grade citasse um nome não registrado, ela quebraria no meio."""
     assert set(PADRAO.encodings_grade) <= set(ENCODINGS)
 
 

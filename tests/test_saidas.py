@@ -1,4 +1,4 @@
-"""Testes dos artefatos de saída: CLI, tabelas e figuras (T13, T15, T9).
+"""Testes dos artefatos de saída: CLI, tabelas e figuras.
 
 O que se protege aqui é a rastreabilidade: as tabelas derivadas têm que nascer
 dos CSVs, e o `.tex` tem que ser colável no Overleaf sem edição manual.

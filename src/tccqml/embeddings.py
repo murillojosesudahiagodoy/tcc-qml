@@ -80,7 +80,7 @@ def amplitude_encoding(x, wires: Sequence[int], params=None) -> None:
     `data.py` normaliza para [0, pi], todos os pontos caem no primeiro
     quadrante e o ângulo entre dois vetores quaisquer fica em [0, pi/2] — a
     geometria é comprimida por um motivo alheio à codificação. O diagnóstico
-    da T2 (`diagnostico_amplitude`, em `experiments.py`) mede o efeito nas duas
+    (`diagnostico_amplitude`, em `experiments.py`) mede o efeito nas duas
     normalizações.
     """
     qml.AmplitudeEmbedding(x, wires=wires, normalize=True, pad_with=0.0)

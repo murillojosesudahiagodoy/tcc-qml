@@ -1,4 +1,4 @@
-"""Contagem de recursos dos circuitos (T1 — lista da Etapa 9).
+"""Contagem de recursos dos circuitos — a lista da Etapa 9 do roteiro.
 
 A Etapa 9 do roteiro manda registrar, para cada codificação: número de qubits,
 profundidade da codificação, profundidade total, número de portas, número de

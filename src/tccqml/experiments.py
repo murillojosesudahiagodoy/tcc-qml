@@ -1,4 +1,4 @@
-"""Runner dos experimentos (T6, T7 — Etapa 10).
+"""Runner dos experimentos — a comparação da Etapa 10 do roteiro.
 
 Aqui mora a grade que produz os números do Capítulo 4. Tudo roda com o MESMO
 protocolo (`config.Protocolo`): a codificação é a única coisa que varia, que é
@@ -57,7 +57,7 @@ def rodar_um(
 
     O histórico já sai com as colunas de custo do circuito repetidas em toda
     linha: desempenho e custo lado a lado é a tese do trabalho, e deixa o CSV
-    autossuficiente para as tabelas da T15.
+    autossuficiente para as tabelas do Capítulo 4.
     """
     L_reup = protocolo.L_reup if L_reup is None else L_reup
     ds = load_dataset(
@@ -123,7 +123,7 @@ def epoca_para_90pct(hist: pd.DataFrame, coluna: str = "acc_treino") -> int:
     """Primeira época que atinge 90% da acurácia final — medida de velocidade.
 
     Convergir rápido e convergir alto são coisas diferentes; esta coluna isola a
-    primeira (é a `tab_convergencia` da T15).
+    primeira (é o que a `tab_convergencia` reporta).
     """
     alvo = 0.9 * float(hist[coluna].iloc[-1])
     atingiu = hist.index[hist[coluna] >= alvo]
@@ -146,10 +146,11 @@ def rodar_grade(
     sementes: tuple[int, ...] | None = None,
     verbose: bool = True,
 ) -> pd.DataFrame:
-    """A grade principal: codificações x datasets x sementes (T6).
+    """A grade principal: codificações x datasets x sementes.
 
     No protocolo padrão são 4 x 3 x 5 = 60 treinos. Os pesos finais de cada
-    treino vão para disco, para a T9 desenhar as fronteiras sem retreinar.
+    treino vão para disco, para `figuras.py` desenhar as fronteiras sem
+    retreinar.
     """
     out = Path(out or protocolo.out)
     encodings = encodings or protocolo.encodings_grade
@@ -224,7 +225,7 @@ def rodar_varredura_L(
     sementes: tuple[int, ...] | None = None,
     verbose: bool = True,
 ) -> pd.DataFrame:
-    """Varredura do número de blocos do re-uploading (T7).
+    """Varredura do número de blocos do re-uploading.
 
     Testa duas das cinco previsões da Seção 2.5.9: a 1 (ganho no `moons` a
     partir de L = 2) e a 5 (saturação da acurácia enquanto o custo sobe
@@ -270,7 +271,7 @@ def rodar_ablacao(
     sementes: tuple[int, ...] | None = None,
     verbose: bool = True,
 ) -> pd.DataFrame:
-    """Ablação do entrelaçamento do ansatz (T5 — Previsão 3, Eq. 2.83).
+    """Ablação do entrelaçamento do ansatz (Previsão 3, Eq. 2.83).
 
     Roda a mesma configuração com e sem CNOTs no ansatz. Sem entrelaçamento o
     modelo passa a enxergar só o primeiro atributo e a acurácia no XOR cai para
@@ -304,7 +305,7 @@ def diagnostico_amplitude(
     sementes: tuple[int, ...] | None = None,
     verbose: bool = True,
 ) -> pd.DataFrame:
-    """Diagnóstico obrigatório da T2: normalização [0, pi] contra [-1, 1].
+    """Diagnóstico do amplitude: normalização [0, pi] contra [-1, 1].
 
     O amplitude encoding descarta a norma e só enxerga a DIREÇÃO do vetor
     (Seção 2.4.4.1). Como `data.py` normaliza para [0, pi], todos os pontos

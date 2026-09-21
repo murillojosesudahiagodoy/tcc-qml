@@ -1,4 +1,4 @@
-"""Testes das contagens de recurso (T1) — confronto direto com o texto.
+"""Testes das contagens de recurso — confronto direto com o texto.
 
 Estes são os testes que importam mais no repositório: eles não verificam que o
 código roda, e sim que ele REPRODUZ os números impressos no TCC. Se um deles
@@ -51,7 +51,7 @@ def test_tabela_2_formulas_gerais(n, L):
 
 
 def test_ansatz_local_nao_tem_portas_de_dois_qubits():
-    """A ablação da T5 só é válida se ela de fato remover o entrelaçamento."""
+    """A ablação só é válida se ela de fato remover o entrelaçamento."""
     s = stats_ansatz(n_qubits=2, n_layers=2, ansatz="local")
 
     assert s["gates_2q"] == 0

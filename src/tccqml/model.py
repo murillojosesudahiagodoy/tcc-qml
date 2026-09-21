@@ -74,7 +74,7 @@ def build(
 ) -> Classificador:
     """Constrói o QNode que devolve <Z_0> em [-1, 1].
 
-    `ansatz` só deve sair do padrão na ablação da T5 — nos experimentos
+    `ansatz` só deve sair do padrão na ablação da Previsão 3 — nos experimentos
     principais ele fica congelado em `strongly_entangling`.
     """
     enc_kwargs = dict(enc_kwargs or {})

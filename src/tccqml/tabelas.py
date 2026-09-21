@@ -1,4 +1,4 @@
-"""Geração das tabelas do Capítulo 4 (T15 — Etapa 10).
+"""Geração das tabelas do Capítulo 4 — a Etapa 10 do roteiro.
 
 Cada tabela sai em dois formatos: `.csv` (para conferir e reprocessar) e
 `.tex` (para colar no Overleaf sem editar nada). O `.tex` é um ambiente

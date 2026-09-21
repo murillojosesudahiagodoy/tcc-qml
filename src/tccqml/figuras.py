@@ -1,4 +1,4 @@
-"""Geração das figuras do TCC (T9 — Etapa 10).
+"""Geração das figuras do TCC — a Etapa 10 do roteiro.
 
 Sete figuras em PDF vetorial, com os nomes exatos que o LaTeX referencia.
 

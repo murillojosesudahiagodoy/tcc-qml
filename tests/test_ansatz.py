@@ -1,4 +1,4 @@
-"""Testes do ansatz e da ablação de entrelaçamento (T5).
+"""Testes do ansatz e da ablação de entrelaçamento.
 
 O teste `test_ablacao_cai_para_o_acaso_no_xor` é o mais informativo do
 repositório: ele não checa uma peça, checa a implementação INTEIRA contra uma

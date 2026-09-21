@@ -148,7 +148,7 @@ def test_amplitude_descarta_a_norma():
     """k(x, cx) = 1 para todo c > 0: só a DIREÇÃO sobrevive (Seção 2.4.4.1).
 
     É a razão pela qual a normalização dos dados interage com esta codificação
-    e precisa do diagnóstico da T2 — dois pontos muito distantes em norma viram
+    e precisa do diagnóstico de normalização — dois pontos distantes em norma viram
     exatamente o mesmo estado.
     """
     a = _estado("amplitude", [0.3, 1.2], 1)

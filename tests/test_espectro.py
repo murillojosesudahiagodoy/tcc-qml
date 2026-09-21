@@ -1,4 +1,4 @@
-"""Testes do espectro de Fourier (T3) — o resultado teórico central.
+"""Testes do espectro de Fourier — o resultado teórico central.
 
 A Tabela 5 (p. 52) afirma que a CODIFICAÇÃO determina quais frequências o
 modelo consegue representar. Estes testes medem por FFT e confrontam.

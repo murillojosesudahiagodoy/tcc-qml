@@ -1,4 +1,4 @@
-"""Protocolo experimental num lugar só (T13).
+"""Protocolo experimental num lugar só.
 
 Todo parâmetro que precisa ser IDÊNTICO entre codificações mora aqui. Antes
 disso eles viviam espalhados como valores padrão de várias funções, que é
@@ -45,7 +45,7 @@ class Protocolo:
     # --- contabilidade de custo em hardware (Eq. 2.48) ---
     shots: int = 1000
 
-    # --- grade de experimentos (T6/T7) ---
+    # --- grade de experimentos e varredura ---
     # Acrescentar uma codificação do Bloco C à comparação é acrescentar uma
     # string aqui, desde que ela esteja registrada em ENCODINGS.
     encodings_grade: tuple[str, ...] = ("angle", "amplitude", "reuploading", "zz")
@@ -53,7 +53,7 @@ class Protocolo:
     L_reup: int = 3
     L_reup_varredura: tuple[int, ...] = (1, 2, 3, 4, 5)
 
-    # --- espectro (T3) ---
+    # --- espectro ---
     espectro_n_pontos: int = 512
     espectro_limiar: float = 1e-6
 

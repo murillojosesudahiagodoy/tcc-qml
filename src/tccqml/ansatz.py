@@ -4,7 +4,7 @@ Este módulo fica CONGELADO a partir da Etapa 8. Toda a comparação da Etapa 9
 depende de o ansatz ser idêntico entre codificações — se ele mudar junto,
 não dá para atribuir a diferença de desempenho à codificação.
 
-A única exceção deliberada é o ansatz ``local`` (T5): uma variante SEM portas
+A única exceção deliberada é o ansatz ``local``: uma variante SEM portas
 de dois qubits, usada exclusivamente na ablação que testa a Previsão 3
 (Eq. 2.83). Ele nunca entra na comparação principal.
 """
@@ -36,7 +36,7 @@ def weights_shape(n_layers: int, n_qubits: int) -> tuple[int, ...]:
 
 
 def local(weights, wires) -> None:
-    """Ablação (T5): rotações genéricas por qubit, SEM nenhuma CNOT.
+    """Ablação: rotações genéricas por qubit, SEM nenhuma CNOT.
 
     U(theta) = prod_i Rot(theta_i), ou seja, um produto tensorial de unitárias
     de um qubit. Tem exatamente o mesmo número de parâmetros que o
@@ -75,7 +75,7 @@ ANSATZE = {
         name="local",
         apply=local,
         weights_shape=weights_shape_local,
-        descricao="Rot por qubit, sem CNOTs — só para a ablação da Previsão 3 (T5)",
+        descricao="Rot por qubit, sem CNOTs — só para a ablação da Previsão 3",
     ),
 }
 

@@ -1,4 +1,4 @@
-"""Medição do espectro de Fourier do modelo (T3).
+"""Medição do espectro de Fourier do modelo.
 
 Este é o resultado teórico central do trabalho virando número medido. Um
 classificador variacional cujo bloco de dados é feito de rotações Pauli é uma
