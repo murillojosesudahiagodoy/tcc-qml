@@ -42,6 +42,27 @@ def _rotulo(chave: str) -> str:
     return ROTULOS.get(chave, str(chave))
 
 
+# Números pequenos vão por extenso na legenda, como manda a ABNT e como as
+# Tabelas 2-5 já escritas fazem. Acima de dez, algarismo.
+_POR_EXTENSO = {
+    1: "uma", 2: "duas", 3: "três", 4: "quatro", 5: "cinco",
+    6: "seis", 7: "sete", 8: "oito", 9: "nove", 10: "dez",
+}
+
+
+def _n_sementes(resumo: pd.DataFrame) -> int | None:
+    """Quantas sementes entraram em cada média, lido de `resumo.csv`.
+
+    `experiments.resumir` grava isso em `acc_teste_count`. Devolve None quando
+    a coluna não existe ou quando as células discordam — a legenda então omite
+    o número, em vez de afirmar um que não foi medido.
+    """
+    if "acc_teste_count" not in resumo.columns:
+        return None
+    valores = set(resumo["acc_teste_count"].dropna().astype(int))
+    return valores.pop() if len(valores) == 1 else None
+
+
 def _ordenar(df: pd.DataFrame, coluna: str, ordem: list[str]) -> pd.DataFrame:
     presentes = [v for v in ordem if v in set(df[coluna])]
     restantes = [v for v in df[coluna].unique() if v not in presentes]
@@ -112,12 +133,18 @@ def tab_acuracia(resumo: pd.DataFrame) -> tuple[pd.DataFrame, str]:
             else ""
             for e in resumo["encoding"].unique()
         ]
-    n_sementes = "cinco sementes"
+    n = _n_sementes(resumo)
+    if n is None:
+        sobre = "sobre as sementes"
+    elif n == 1:
+        sobre = "sobre uma semente"
+    else:
+        sobre = f"sobre {_POR_EXTENSO.get(n, n)} sementes"
     tex = to_latex(
         tabela,
         caption=(
             "Acurácia no conjunto de teste por codificação e conjunto de dados "
-            f"(média $\\pm$ desvio padrão sobre {n_sementes})."
+            f"(média $\\pm$ desvio padrão {sobre})."
         ),
         label="tab:acuracia",
         nota=(

@@ -31,6 +31,7 @@ def resumo_falso() -> pd.DataFrame:
                     "dataset": dataset,
                     "acc_teste_mean": 0.8,
                     "acc_teste_std": 0.02,
+                    "acc_teste_count": 5,
                     "acc_treino_mean": 0.81,
                     "acc_treino_std": 0.02,
                     "custo_final_mean": 0.5,
@@ -96,6 +97,22 @@ def test_tab_acuracia_sai_do_resumo(resumo_falso):
 
     assert next(iter(tabela.columns)) == "Codificação"
     assert "0.800" in tex and "0.020" in tex
+
+
+def test_legenda_conta_as_sementes_do_csv(resumo_falso):
+    """O número de sementes da legenda sai do CSV, não de um literal.
+
+    Por extenso até dez, no padrão ABNT das tabelas já escritas.
+    """
+    _, tex = tab_acuracia(resumo_falso)
+    assert "sobre cinco sementes" in tex
+
+    doze = resumo_falso.assign(acc_teste_count=12)
+    _, tex_doze = tab_acuracia(doze)
+    assert "sobre 12 sementes" in tex_doze
+
+    _, tex_sem_contagem = tab_acuracia(resumo_falso.drop(columns=["acc_teste_count"]))
+    assert "sobre as sementes" in tex_sem_contagem
 
 
 def test_tab_custo_reporta_os_itens_da_etapa_9(resumo_falso):

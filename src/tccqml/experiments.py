@@ -56,8 +56,7 @@ def rodar_um(
     """Um treino completo. Devolve (histórico anotado, resumo, resultado).
 
     O histórico já sai com as colunas de custo do circuito repetidas em toda
-    linha: desempenho e custo lado a lado é a tese do trabalho, e deixa o CSV
-    autossuficiente para as tabelas do Capítulo 4.
+    linha, o que deixa o CSV autossuficiente para as tabelas do Capítulo 4.
     """
     L_reup = protocolo.L_reup if L_reup is None else L_reup
     ds = load_dataset(
@@ -201,7 +200,9 @@ def resumir(por_treino: pd.DataFrame) -> pd.DataFrame:
     que o desvio não sustenta afirmação nenhuma no Capítulo 4.
     """
     agregacoes = {
-        "acc_teste": ["mean", "std"],
+        # `count` deixa o número de sementes legível no CSV, para a legenda da
+        # tab_acuracia não precisar repetir um número escrito à mão.
+        "acc_teste": ["mean", "std", "count"],
         "acc_treino": ["mean", "std"],
         "custo_final": ["mean", "std"],
         "epoca_90pct": ["mean", "std"],
