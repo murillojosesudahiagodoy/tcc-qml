@@ -22,6 +22,9 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
+from matplotlib.ticker import MaxNLocator
 
 from tccqml import model
 from tccqml.config import PADRAO
@@ -147,7 +150,9 @@ def fig_curvas_treinamento(comparacao: pd.DataFrame, destino: Path) -> Path:
         eixos[1][coluna].set_xlabel(f"{NOMES.get(dataset, dataset)}\népoca")
     eixos[0][0].set_ylabel("custo quadrático")
     eixos[1][0].set_ylabel("acurácia de teste")
-    eixos[0][-1].legend(loc="upper right", framealpha=0.9)
+    # Acima da grade, numa linha: dentro de um painel ela cobria as curvas.
+    alcas, rotulos = eixos[0][0].get_legend_handles_labels()
+    fig.legend(alcas, rotulos, loc="outside upper center", ncol=len(rotulos), frameon=False)
     return _salvar(fig, "curvas-treinamento.pdf", destino)
 
 
@@ -225,6 +230,20 @@ def fig_fronteiras(
                 eixo.set_ylabel(f"{NOMES.get(encoding, encoding)}\n$x_2$")
             if i == len(encodings) - 1:
                 eixo.set_xlabel("$x_1$")
+
+    # Uma legenda só, abaixo da grade: o marcador é a classe VERDADEIRA e a cor
+    # do fundo é a PREVISÃO. Um erro é um marcador sobre o fundo da outra
+    # classe. O "RdBu" leva saída negativa (prevê 0) ao vermelho e positiva
+    # (prevê 1) ao azul, como `model.prever`.
+    mapa = plt.get_cmap("RdBu")
+    itens = [
+        Line2D([], [], marker="o", color="#1b1b1b", linestyle="", markersize=5, label="classe 0 (teste)"),
+        Line2D([], [], marker="^", color="#7a0f16", linestyle="", markersize=5, label="classe 1 (teste)"),
+        Patch(facecolor=mapa(0.2), alpha=0.55, label="prevê classe 0"),
+        Patch(facecolor=mapa(0.8), alpha=0.55, label="prevê classe 1"),
+        Line2D([], [], color="k", linewidth=1.1, label="fronteira (saída = 0)"),
+    ]
+    fig.legend(handles=itens, loc="outside lower center", ncol=3, framealpha=0.9)
     return _salvar(fig, "fronteiras-aprendidas.pdf", destino)
 
 
@@ -265,7 +284,7 @@ def fig_acuracia_vs_custo(resumo: pd.DataFrame, destino: Path) -> Path:
     tamanho do marcador mostra as portas de dois qubits, que é onde o erro se
     concentra.
     """
-    fig, eixo = plt.subplots(figsize=(4.6, 3.0))
+    fig, eixo = plt.subplots(figsize=(5.6, 3.0))
     for encoding in _presentes(resumo["encoding"], ORDEM_ENCODINGS):
         fatia = resumo[resumo["encoding"] == encoding]
         estilo = _estilo(encoding)
@@ -277,7 +296,9 @@ def fig_acuracia_vs_custo(resumo: pd.DataFrame, destino: Path) -> Path:
             facecolors="none",
             edgecolors=estilo["color"],
             linewidths=1.4,
-            label=NOMES.get(encoding, encoding),
+            # O número de CNOTs é fixo por codificação, então ele vai no próprio
+            # rótulo: explica o tamanho do marcador sem uma segunda legenda.
+            label=f"{NOMES.get(encoding, encoding)} ({int(fatia['gates_2q'].iloc[0])} CNOTs)",
         )
         for linha in fatia.itertuples():
             eixo.annotate(
@@ -290,6 +311,8 @@ def fig_acuracia_vs_custo(resumo: pd.DataFrame, destino: Path) -> Path:
             )
     eixo.set_xlabel("profundidade total do circuito")
     eixo.set_ylabel("acurácia de teste")
+    # Profundidade é contagem de portas: marcas só em inteiros.
+    eixo.xaxis.set_major_locator(MaxNLocator(integer=True))
     # Folga à direita para o rótulo do ponto mais à direita não sair do quadro.
     eixo.margins(x=0.18)
     # A legenda vai ACIMA dos eixos: os pontos ocupam quase todo o quadro e
@@ -330,6 +353,11 @@ def fig_espectro(destino: Path, L_reups: tuple[int, ...] = (1, 2, 3)) -> Path:
         eixo.set_xlabel(f"{rotulo}\n$\\omega$")
         eixo.set_xticks(range(n))
     eixos[0][0].set_ylabel("$|c_\\omega|$")
+    # As barras já são explicadas pelo eixo; só a linha tracejada precisa de
+    # legenda. Fica fora dos painéis: eles são estreitos demais e qualquer
+    # caixa interna encosta na própria linha que ela explica.
+    limite = Line2D([], [], color="#c44e52", linestyle="--", linewidth=1.1, label="limite teórico")
+    fig.legend(handles=[limite], loc="outside upper right", frameon=False)
     return _salvar(fig, "espectro-reuploading.pdf", destino)
 
 
@@ -364,6 +392,8 @@ def fig_custo_por_codificacao(resumo: pd.DataFrame, destino: Path) -> Path:
         for pos, valor in zip(posicoes, custo[coluna].values):
             eixo.text(pos, valor, f"{int(valor)}", ha="center", va="bottom", fontsize=7)
         eixo.margins(y=0.18)
+    itens = [Patch(facecolor=_estilo(e)["color"], label=NOMES.get(e, e)) for e in encodings]
+    fig.legend(handles=itens, loc="outside upper center", ncol=len(itens), framealpha=0.9)
     return _salvar(fig, "custo-por-codificacao.pdf", destino)
 
 
