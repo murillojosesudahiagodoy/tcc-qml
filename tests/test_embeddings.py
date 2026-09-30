@@ -83,7 +83,7 @@ def test_registro_cobre_as_quatro_da_etapa_9():
 
 @pytest.mark.parametrize("encoding", NUCLEO)
 def test_produz_estado_normalizado(encoding):
-    """Norma 1 é a condição de estado físico. Se quebrar, tudo depois é lixo."""
+    """Norma 1 é a condição de estado físico: sem ela nada depois faz sentido."""
     enc = get_encoding(encoding)
     n_qubits = enc.n_qubits(2)
     params = (

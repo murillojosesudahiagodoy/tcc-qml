@@ -1,8 +1,8 @@
 """Testes das contagens de recurso — confronto direto com o texto.
 
-Estes são os testes que importam mais no repositório: eles não verificam que o
-código roda, e sim que ele REPRODUZ os números impressos no TCC. Se um deles
-falhar, ou o código está errado ou o texto está — e vale muito saber qual.
+Estes testes não verificam que o código roda, e sim que ele reproduz os
+números impressos no TCC (Tabelas 2 e 3, Eqs. 2.47 e 2.48). Se um deles
+falhar, ou o código está errado ou o texto está.
 """
 
 import numpy as np
@@ -67,7 +67,7 @@ def test_eq_2_47_duas_avaliacoes_por_parametro():
     assert avaliacoes_por_gradiente(12) == 24
 
 
-def test_eq_2_48_dá_504_000_na_configuracao_de_referencia():
+def test_eq_2_48_da_504_000_na_configuracao_de_referencia():
     """N_circ = 2 p |B| shots = 2 * 12 * 21 * 1000 = 504 000 (p. 36 do texto)."""
     assert n_execucoes_hardware(n_params_circuito=12, batch_size=21, shots=1000) == 504_000
 

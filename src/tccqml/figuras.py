@@ -307,8 +307,7 @@ def fig_acuracia_vs_custo(resumo: pd.DataFrame, destino: Path) -> Path:
 def fig_espectro(destino: Path, L_reups: tuple[int, ...] = (1, 2, 3)) -> Path:
     """FFT de f(x) para L crescente: Omega_L abrindo com L (Tabela 5).
 
-    O angle encoding entra como piso — se ele mostrasse energia acima de
-    |omega| = 1, a medição estaria errada, não a teoria.
+    O angle encoding entra como piso de comparação, com Omega = {-1, 0, 1}.
     """
     configuracoes = [("angle", None, None)] + [
         ("reuploading", {"L_reup": L}, L) for L in L_reups
@@ -319,8 +318,8 @@ def fig_espectro(destino: Path, L_reups: tuple[int, ...] = (1, 2, 3)) -> Path:
     for eixo, (encoding, kwargs, L) in zip(eixos[0], configuracoes):
         clf = model.build(encoding, n_features=2, n_layers=PADRAO.n_layers, enc_kwargs=kwargs)
         w, alpha, _ = pesos_iniciais(clf, seed=PADRAO.seed)
-        # Escala maior nos pesos excita todo o espectro acessível: o que se
-        # mede é o CONJUNTO de frequências, não o jogo de pesos.
+        # Escala maior nos pesos excita todo o espectro acessível (mesmo
+        # motivo de `espectro.tabela_espectro`).
         espectros = espectro_por_atributo(clf, w * 3.0, alpha)
         melhor = max(espectros, key=lambda e: e.omega_max)
         n = min(len(melhor.amplitudes), 8)

@@ -97,7 +97,7 @@ def init_weights(
 
     A escala pequena é deliberada: inicialização uniforme em [0, 2pi] num
     circuito profundo cai em barren plateau, onde o gradiente é praticamente
-    nulo e o treino não sai do lugar (Etapa 5).
+    nulo e o treino não sai do lugar.
 
     ``forma`` permite inicializar um tensor de forma arbitrária (o
     re-uploading tem os pesos ditados pela codificação, não por (L, n)).

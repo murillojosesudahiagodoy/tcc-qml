@@ -1,12 +1,11 @@
 """Protocolo experimental num lugar só.
 
-Todo parâmetro que precisa ser IDÊNTICO entre codificações mora aqui. Antes
-disso eles viviam espalhados como valores padrão de várias funções, que é
-exatamente como a divergência `n_samples` 200 (código) contra 300 (Seção
-2.5.7) apareceu sem ninguém notar.
+Todo parâmetro que precisa ser idêntico entre codificações mora aqui, e não
+como valor padrão espalhado pelas funções: é o que impede o código e o texto
+de divergirem sem ninguém notar.
 
-Este módulo é também a fonte fiel para escrever o Capítulo 3: o que está
-escrito aqui é o que de fato roda.
+Este módulo é a fonte fiel para escrever o Capítulo 3: o que está escrito
+aqui é o que de fato roda.
 """
 
 from dataclasses import dataclass

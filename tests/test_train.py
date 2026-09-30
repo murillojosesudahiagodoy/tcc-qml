@@ -17,7 +17,7 @@ def test_accuracy_conta_acertos():
 
 
 def test_treino_reduz_o_custo():
-    """O teste que importa: se o custo não cai, o modelo não está aprendendo."""
+    """Se o custo não cai ao longo das épocas, o modelo não está aprendendo."""
     ds = load_dataset("moons", n_samples=80, seed=42)
     clf = model.build("angle", n_features=2, n_layers=2)
 
@@ -62,7 +62,7 @@ def test_historico_e_metadados_completos():
 
 
 def test_meta_separa_p_do_circuito_dos_parametros_do_modelo():
-    """Os CSVs antigos gravavam n_params=13 onde o texto fala em p=12."""
+    """O CSV precisa gravar os dois contadores: o texto fala em p = 12, não 13."""
     ds = load_dataset("moons", n_samples=60, seed=42)
     clf = model.build("angle", n_features=2, n_layers=2)
 

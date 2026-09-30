@@ -1,6 +1,6 @@
 """Linha de comando do projeto.
 
-Trocar de codificação deixa de exigir caçar strings no notebook:
+Cada experimento do trabalho é um subcomando:
 
     python -m tccqml listar
     python -m tccqml treinar --encoding amplitude --dataset moons
@@ -20,7 +20,7 @@ aparecer na ajuda e poder entrar na grade — não existe uma segunda lista para
 manter em sincronia, e é por isso que `Encoding.descricao` existe.
 
 Toda execução de `treinar` imprime o bloco de custo do circuito junto da
-acurácia: desempenho e custo lado a lado é a tese do trabalho.
+acurácia, porque a comparação do trabalho é entre os dois.
 """
 
 from __future__ import annotations

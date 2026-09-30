@@ -1,9 +1,8 @@
 """Testes do ansatz e da ablação de entrelaçamento.
 
-O teste `test_ablacao_cai_para_o_acaso_no_xor` é o mais informativo do
-repositório: ele não checa uma peça, checa a implementação INTEIRA contra uma
-previsão fechada do texto. Se ele passar, a cadeia
-dados -> codificação -> ansatz -> medição -> treino está coerente.
+`test_ablacao_cai_para_o_acaso_no_xor` checa a cadeia inteira
+(dados -> codificação -> ansatz -> medição -> treino) contra a Previsão 3,
+em vez de checar uma peça isolada.
 """
 
 import numpy as np

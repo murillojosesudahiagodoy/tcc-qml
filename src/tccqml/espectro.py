@@ -168,9 +168,8 @@ def tabela_espectro(
 ) -> pd.DataFrame:
     """Omega medido por FFT contra Omega previsto, uma linha por configuração.
 
-    Inclui o `angle` de propósito: ele é o piso contra o qual o re-uploading é
-    medido, e um espectro de angle com energia em |omega| > 1 significaria que
-    a medição está errada, não que a teoria está.
+    Inclui o `angle` de propósito: ele é o piso contra o qual o re-uploading
+    é medido (ver `test_angle_nao_tem_energia_acima_da_frequencia_1`).
     """
     from tccqml import model
 
@@ -182,8 +181,8 @@ def tabela_espectro(
         clf = model.build(enc, n_features=n_features, n_layers=n_layers, enc_kwargs=kwargs)
         w, alpha, _ = pesos_iniciais(clf, seed=seed)
         # Pesos aleatórios pequenos podem esconder frequências altas por
-        # coeficiente quase nulo; uma escala maior excita todo o espectro
-        # acessível, que é o que se quer MEDIR (o conjunto, não os pesos).
+        # coeficiente quase nulo; a escala maior excita todo o espectro
+        # acessível (mesmo motivo de `_pesos_excitados`, em test_espectro.py).
         w = w * 3.0
         espectros = espectro_por_atributo(clf, w, alpha)
         por_atributo = [e.omega_max for e in espectros]

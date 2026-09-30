@@ -12,7 +12,7 @@ from tccqml.embeddings import ENCODINGS
 
 
 def test_n_samples_bate_com_a_secao_2_5_7():
-    """A divergência que o config.py fechou: o código dizia 200, o texto diz 300."""
+    """N = 300 é o que a Seção 2.5.7 declara — e tem que ser o que roda."""
     assert PADRAO.n_samples == 300
 
 

@@ -52,7 +52,8 @@ python -m tccqml tabelas        # results/tables/*.tex
 python -m tccqml figuras        # results/figures/*.pdf
 ```
 
-`comparar` leva cerca de 10 minutos e `varredura` cerca de 25 em uma máquina comum.
+`comparar` leva cerca de 10 minutos e `varredura` cerca de 25 na máquina do autor
+(notebook, CPU, sem GPU); a coluna `segundos` de `por_treino.csv` traz o tempo medido.
 
 ## Onde cada número do TCC nasce
 
@@ -64,7 +65,7 @@ Nenhum número do Capítulo 4 é digitado à mão: todos saem de um CSV em `resu
 | `tab_custo.tex` | `resumo.csv` | `comparar` → `tabelas` |
 | `tab_convergencia.tex` | `resumo.csv` | `comparar` → `tabelas` |
 | `tab_espectro.tex` | `espectro.csv` | `espectro` → `tabelas` |
-| `tab_qualitativa.tex` | julgamento do autor | `tabelas` (**editar à mão**) |
+| `tab_qualitativa.tex` | `QUALITATIVA`, em `tabelas.py` | `tabelas` |
 | `datasets.pdf` | — | `figuras` |
 | `curvas-treinamento.pdf` | `comparacao.csv` | `comparar` → `figuras` |
 | `fronteiras-aprendidas.pdf` | `results/weights/` | `comparar` → `figuras` |
@@ -75,7 +76,9 @@ Nenhum número do Capítulo 4 é digitado à mão: todos saem de um CSV em `resu
 
 As quatro primeiras tabelas são **derivadas e não devem ser editadas à mão**: se um número
 estiver estranho, o lugar de corrigir é o experimento. A `tab_qualitativa` é a exceção —
-a coluna de dificuldade de implementação é julgamento, não medição.
+a coluna de dificuldade de implementação é julgamento, não medição. Mesmo ela não se
+edita no `.tex`, que `tabelas` sobrescreve: o texto vive na lista `QUALITATIVA`, em
+[`tabelas.py`](src/tccqml/tabelas.py), e é lá que se revisa.
 
 ## O protocolo congelado
 
@@ -152,6 +155,7 @@ Registradas aqui porque pertencem à seção de limitações do texto:
 
 - `feat:` nova funcionalidade / experimento
 - `fix:` correção
+- `refactor:` reorganização sem mudança de comportamento
 - `exp:` rodada de experimento
 - `docs:` texto do TCC, anotações
 - `test:` testes
