@@ -147,12 +147,31 @@ def tab_acuracia(resumo: pd.DataFrame) -> tuple[pd.DataFrame, str]:
             f"(média $\\pm$ desvio padrão {sobre})."
         ),
         label="tab:acuracia",
-        nota=(
-            "O \\textit{amplitude} usa 1 qubit e 6 parâmetros, contra 2 qubits e "
-            "12 das demais (ver Tabela~\\ref{tab:custo})."
-        ),
+        nota=_nota_recursos(resumo),
     )
     return tabela, tex
+
+
+def _nota_recursos(resumo: pd.DataFrame) -> str | None:
+    """Qubits e `p` de cada codificação, lidos de `resumo.csv`.
+
+    A comparação de acurácia não é entre modelos de mesmo tamanho, e a nota
+    diz isso com os números de cada linha, em vez de uma frase fixa que envelhece
+    quando uma codificação muda (foi o que aconteceu com o re-uploading, p = 18).
+    """
+    colunas = {"n_qubits", "n_params_circuito"}
+    if not colunas <= set(resumo.columns):
+        return None
+    recursos = resumo.groupby("encoding", observed=True)[sorted(colunas)].first()
+    partes = [
+        f"{_rotulo(e)}, {int(recursos.loc[e, 'n_qubits'])} e {int(recursos.loc[e, 'n_params_circuito'])}"
+        for e in [e for e in ORDEM_ENCODINGS if e in recursos.index]
+    ]
+    return (
+        "Qubits e parâmetros do circuito ($p$) de cada codificação: "
+        + "; ".join(partes)
+        + " (ver Tabela~\\ref{tab:custo})."
+    )
 
 
 # --------------------------------------------------------------------------

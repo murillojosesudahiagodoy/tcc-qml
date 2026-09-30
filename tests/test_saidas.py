@@ -98,6 +98,18 @@ def test_tab_acuracia_sai_do_resumo(resumo_falso):
     assert next(iter(tabela.columns)) == "Codificação"
     assert "0.800" in tex and "0.020" in tex
 
+    # A nota de qubits e p também sai de cada linha do resumo, não de uma frase
+    # fixa: mudar p de uma codificação tem que mudar a nota.
+    assert "\\textit{Angle}, 2 e 12" in tex
+    assert "\\textit{Amplitude}, 1 e 6" in tex
+    maior = resumo_falso.assign(
+        n_params_circuito=resumo_falso["n_params_circuito"].where(
+            resumo_falso["encoding"] != "angle", 18
+        )
+    )
+    _, tex_maior = tab_acuracia(maior)
+    assert "\\textit{Angle}, 2 e 18" in tex_maior
+
 
 def test_legenda_conta_as_sementes_do_csv(resumo_falso):
     """O número de sementes da legenda sai do CSV, não de um literal.
