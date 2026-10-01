@@ -54,6 +54,7 @@ class Protocolo:
 
     # --- espectro ---
     espectro_n_pontos: int = 512
+    espectro_n_pontos_2d: int = 32
     espectro_limiar: float = 1e-6
 
     # --- saída ---

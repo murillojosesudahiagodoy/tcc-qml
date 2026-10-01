@@ -11,6 +11,7 @@ from tccqml import model
 from tccqml.espectro import (
     ENCODINGS_COM_ESPECTRO,
     espectro,
+    espectro_2d,
     espectro_por_atributo,
     n_termos_previsto,
     omega_previsto,
@@ -87,11 +88,49 @@ def test_assimetria_entre_atributos_do_reuploading():
     assert esp_x0.omega_max == L - 1
 
 
-def test_tabela_5_e_reproduzida_por_completo():
-    """A linha a linha da Tabela 5 para as codificações em que ela se aplica."""
+def test_tabela_5_e_um_limite_superior():
+    """Nenhuma energia fora de Omega^d — é o que a Tabela 5 garante.
+
+    E só isso: com o ansatz congelado, x_1 não chega ao omega previsto no
+    re-uploading (ver `test_assimetria_entre_atributos_do_reuploading`), e o
+    número de termos medido fica abaixo de (2L + 1)^d.
+    """
     tabela = tabela_espectro(L_reups=(1, 2, 3))
 
-    assert tabela["confere"].all(), tabela.to_string(index=False)
+    assert tabela["dentro_do_limite"].all(), tabela.to_string(index=False)
+    assert (tabela["n_termos_medido"] <= tabela["n_termos_previsto"]).all()
+
+    reup = tabela[tabela["encoding"] == "reuploading"]
+    assert list(reup["omega_max_x1"]) == [0, 1, 2]
+    assert list(reup["omega_max_x2"]) == [1, 2, 3]
+    assert not reup["atinge_limite"].any()
+
+
+def test_espectro_2d_concorda_com_as_varreduras_1d():
+    """As duas medições têm que dar o mesmo omega máximo por atributo."""
+    for kwargs in (None, {"L_reup": 2}, {"L_reup": 3}):
+        enc = "angle" if kwargs is None else "reuploading"
+        clf = model.build(enc, n_features=2, n_layers=2, enc_kwargs=kwargs)
+        w, alpha = _pesos_excitados(clf)
+
+        e2 = espectro_2d(clf, w, alpha)
+        for i, esp in enumerate(espectro_por_atributo(clf, w, alpha)):
+            assert e2.omega_max(i) == esp.omega_max
+
+
+def test_angle_tem_termos_cruzados_com_ansatz_entrelacado():
+    """O termo cos(x_1) cos(x_2) do XOR é cruzado (Seção 2.5.6.3).
+
+    Com CNOTs ele recebe peso; sem CNOTs (ansatz `local`) a saída só depende
+    de x_1 e nenhum termo cruzado sobrevive (Eq. 2.83).
+    """
+    com = model.build("angle", n_features=2, n_layers=2)
+    sem = model.build("angle", n_features=2, n_layers=2, ansatz="local")
+
+    assert espectro_2d(com, *_pesos_excitados(com)).n_cruzados > 0
+    e_sem = espectro_2d(sem, *_pesos_excitados(sem))
+    assert e_sem.n_cruzados == 0
+    assert e_sem.omega_max(1) == 0
 
 
 def test_49_termos_contra_p_parametros():
@@ -125,3 +164,25 @@ def test_espectro_e_reprodutivel():
     b = espectro(clf, w, alpha)
 
     assert np.allclose(a.amplitudes, b.amplitudes)
+
+
+@pytest.mark.parametrize(
+    ("encoding", "kwargs", "n_termos"),
+    [("angle", None, 6), ("reuploading", {"L_reup": 1}, 2), ("reuploading", {"L_reup": 2}, 10),
+     ("reuploading", {"L_reup": 3}, 35)],
+)
+def test_contagem_de_termos_e_da_arquitetura_e_nao_dos_pesos(encoding, kwargs, n_termos):
+    """O número de termos da tab_espectro não é sorte de um jogo de pesos.
+
+    São 40 sorteios: 20 sementes da inicialização de treino (escalada) e 20 de
+    pesos uniformes em [0, 2pi). A contagem não muda — é o que o relatório afirma.
+    """
+    clf = model.build(encoding, n_features=2, n_layers=2, enc_kwargs=kwargs)
+    contagens = set()
+    for seed in range(42, 62):
+        w, alpha, _ = pesos_iniciais(clf, seed=seed)
+        uniforme = np.random.default_rng(seed).uniform(0, 2 * np.pi, np.shape(w))
+        for pesos in (w * 3.0, uniforme):
+            contagens.add(espectro_2d(clf, pesos, alpha).n_termos)
+
+    assert contagens == {n_termos}

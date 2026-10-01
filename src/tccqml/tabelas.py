@@ -270,7 +270,12 @@ def tab_convergencia(resumo: pd.DataFrame) -> tuple[pd.DataFrame, str]:
 
 
 def tab_espectro(espectro: pd.DataFrame) -> tuple[pd.DataFrame, str]:
-    """Omega medido por FFT contra o previsto na Tabela 5 (p. 52)."""
+    """Omega medido por FFT 2D contra o limite da Tabela 5 (p. 52).
+
+    O omega vai POR ATRIBUTO: o máximo entre os dois coincidiria com o previsto
+    e esconderia que x_1 para em L - 1. Os termos são CONTADOS na FFT 2D, e
+    não calculados como (2 omega_max + 1)^d.
+    """
     tabela = pd.DataFrame(
         {
             "Codificação": [
@@ -278,24 +283,28 @@ def tab_espectro(espectro: pd.DataFrame) -> tuple[pd.DataFrame, str]:
                 for r in espectro.itertuples()
             ],
             "$\\omega_{\\max}$ previsto": espectro["omega_max_previsto"].astype(int).values,
-            "$\\omega_{\\max}$ medido": espectro["omega_max_medido"].astype(int).values,
+            "$\\omega_{\\max}$ em $x_1$": espectro["omega_max_x1"].astype(int).values,
+            "$\\omega_{\\max}$ em $x_2$": espectro["omega_max_x2"].astype(int).values,
             "Termos previstos": espectro["n_termos_previsto"].astype(int).values,
             "Termos medidos": espectro["n_termos_medido"].astype(int).values,
+            "Cruzados": espectro["n_termos_cruzados"].astype(int).values,
             "$p$": espectro["n_params_circuito"].astype(int).values,
         }
     )
     tex = to_latex(
         tabela,
         caption=(
-            "Espectro de Fourier medido por FFT contra o previsto na "
+            "Espectro de Fourier medido por FFT 2D contra o limite da "
             "Tabela~\\ref{tab:espectro-previsto}, com $d = 2$ atributos."
         ),
         label="tab:espectro",
         nota=(
-            "O número de termos cresce como $(2L+1)^d$ enquanto $p$ cresce "
-            "linearmente: os coeficientes não podem ser escolhidos de forma "
-            "independente. Codificações \\textit{amplitude} e ZZ não aparecem "
-            "porque a saída não é uma série de Fourier nos atributos."
+            "A teoria dá um limite superior: nenhuma energia aparece fora de "
+            "$\\{-L, \\dots, L\\}^d$, mas nem todos os termos permitidos aparecem. "
+            "\\textit{Termos medidos}: pares $(\\omega_1, \\omega_2)$ com energia "
+            "na FFT 2D; \\textit{Cruzados}: os que dependem dos dois atributos. "
+            "Codificações \\textit{amplitude} e ZZ não aparecem porque a saída não "
+            "é uma série de Fourier nos atributos."
         ),
     )
     return tabela, tex

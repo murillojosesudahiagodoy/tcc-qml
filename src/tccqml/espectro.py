@@ -9,8 +9,17 @@ série de Fourier truncada nos atributos (Seção 2.4.5):
 e quem determina o conjunto de frequências acessíveis Omega é a CODIFICAÇÃO,
 não o ansatz. O ansatz só escolhe os coeficientes c_omega. A Tabela 5 (p. 52)
 afirma Omega = {-1, 0, 1} por atributo para o angle encoding e
-Omega = {-L, ..., L} para o re-uploading com L blocos; `espectro()` confirma ou
-refuta isso por FFT.
+Omega = {-L, ..., L} para o re-uploading com L blocos.
+
+Omega é um LIMITE SUPERIOR: diz quais frequências podem aparecer, não que
+todas apareçam. Duas medições confrontam o limite:
+
+- `espectro()` varre um atributo com o outro fixo (FFT 1D) e mostra o perfil
+  de |c_omega| numa direção — é o que a figura desenha;
+- `espectro_2d()` avalia f numa grade inteira de [0, 2pi)^2 (FFT 2D) e conta
+  os termos (omega_1, omega_2) que de fato têm energia, termos cruzados
+  incluídos. É esse número, e não (2 omega_max + 1)^d, que se compara aos
+  (2L + 1)^d termos previstos.
 
 Onde NÃO se aplica, e por quê — documentado aqui para ninguém tentar depois:
 
@@ -25,11 +34,10 @@ Uma assimetria MEDIDA, que vale reportar no Capítulo 4: com dois qubits, o par
 de CNOTs em anel do StronglyEntanglingLayers leva Z_0 exatamente em Z_1 na
 imagem de Heisenberg. O efeito é que o último bloco S(x) não alcança o atributo
 0: varrendo x_0 o espectro medido vai só até L - 1, enquanto varrendo x_1 vai
-até L, como a Tabela 5 prevê. O limite teórico é sobre o que a CODIFICAÇÃO
-torna acessível; o que se perde num atributo é consequência do ansatz
-congelado, não da codificação. Por isso a medição percorre TODOS os atributos e
-reporta o máximo — e guarda os valores por atributo, para a assimetria ficar
-visível em vez de escondida.
+até L. Com L = 1 o modelo ignora x_0 por completo. O limite teórico é sobre o
+que a CODIFICAÇÃO torna acessível; o que se perde num atributo é consequência
+da arquitetura (anel de CNOTs + medição de Z_0), não da codificação. Por isso
+a tabela reporta o omega de CADA atributo, e não só o máximo entre eles.
 """
 
 from dataclasses import dataclass
@@ -43,6 +51,27 @@ from tccqml.model import Classificador, pesos_iniciais
 
 # Codificações para as quais a leitura de espectro é teoricamente válida.
 ENCODINGS_COM_ESPECTRO = ("angle", "reuploading")
+
+
+@dataclass
+class Espectro2D:
+    """Saída de uma FFT 2D de f sobre [0, 2pi)^2."""
+
+    termos: list[tuple[int, int]]  # (omega_1, omega_2) com energia acima do limiar
+    limiar: float
+
+    @property
+    def n_termos(self) -> int:
+        return len(self.termos)
+
+    @property
+    def n_cruzados(self) -> int:
+        """Termos que dependem dos dois atributos ao mesmo tempo."""
+        return sum(1 for a, b in self.termos if a != 0 and b != 0)
+
+    def omega_max(self, atributo: int) -> int:
+        """Maior |omega| alcançado na direção de um atributo."""
+        return max((abs(t[atributo]) for t in self.termos), default=0)
 
 
 @dataclass
@@ -102,6 +131,39 @@ def espectro(
         encoding=clf.encoding,
         limiar=float(limiar),
     )
+
+
+def espectro_2d(
+    clf: Classificador,
+    weights=None,
+    alpha=None,
+    n_pontos: int = PADRAO.espectro_n_pontos_2d,
+    limiar: float = PADRAO.espectro_limiar,
+) -> Espectro2D:
+    """FFT 2D de f numa grade uniforme de [0, 2pi)^2.
+
+    Diferente da varredura 1D, nada fica fixo: todos os termos da série,
+    cruzados incluídos, aparecem com o seu coeficiente. `n_pontos` por eixo só
+    precisa passar de 2 * omega_max para não haver aliasing; 32 cobre até
+    omega = 15, folga de sobra para L <= 5.
+    """
+    if _n_features(clf) != 2:
+        raise ValueError("espectro_2d só está definido para d = 2 atributos")
+    if weights is None:
+        weights, alpha_padrao, _ = pesos_iniciais(clf)
+        alpha = alpha_padrao if alpha is None else alpha
+
+    eixo = np.linspace(0.0, 2 * np.pi, n_pontos, endpoint=False)
+    g1, g2 = np.meshgrid(eixo, eixo, indexing="ij")
+    X = np.column_stack([g1.ravel(), g2.ravel()])
+    f = np.asarray(clf.circuit(pnp.array(X, requires_grad=False), weights, alpha), dtype=float)
+
+    coef = np.abs(np.fft.fft2(f.reshape(n_pontos, n_pontos))) / n_pontos**2
+    frequencias = np.fft.fftfreq(n_pontos, d=1.0 / n_pontos).astype(int)
+    termos = sorted(
+        (int(frequencias[i]), int(frequencias[j])) for i, j in zip(*np.nonzero(coef > limiar))
+    )
+    return Espectro2D(termos=termos, limiar=float(limiar))
 
 
 def _n_features(clf: Classificador) -> int:
@@ -166,10 +228,20 @@ def tabela_espectro(
     n_layers: int = PADRAO.n_layers,
     seed: int = PADRAO.seed,
 ) -> pd.DataFrame:
-    """Omega medido por FFT contra Omega previsto, uma linha por configuração.
+    """Omega medido contra Omega previsto, uma linha por configuração.
 
     Inclui o `angle` de propósito: ele é o piso contra o qual o re-uploading
     é medido (ver `test_angle_nao_tem_energia_acima_da_frequencia_1`).
+
+    Colunas de medição, todas lidas da FFT 2D:
+
+    - `omega_max_x1`, `omega_max_x2`: omega máximo em cada direção;
+    - `n_termos_medido`: termos (omega_1, omega_2) com energia;
+    - `n_termos_cruzados`: desses, os que dependem dos dois atributos;
+    - `dentro_do_limite`: nenhuma energia fora de Omega^d, que é o que a
+      teoria garante;
+    - `atinge_limite`: os dois atributos chegam ao omega previsto, que é o que
+      a teoria NÃO garante e que a arquitetura pode impedir.
     """
     from tccqml import model
 
@@ -184,25 +256,21 @@ def tabela_espectro(
         # coeficiente quase nulo; a escala maior excita todo o espectro
         # acessível (mesmo motivo de `_pesos_excitados`, em test_espectro.py).
         w = w * 3.0
-        espectros = espectro_por_atributo(clf, w, alpha)
-        por_atributo = [e.omega_max for e in espectros]
-        omega_max = max(por_atributo)
-        previsto = omega_previsto(enc, L or PADRAO.L_reup)
-        # |Omega| = 2 * omega_max + 1: omega = 0 é sempre acessível (o viés e o
-        # termo constante da série), mesmo quando um jogo de pesos específico
-        # zera o seu coeficiente.
-        n_termos_medido = (2 * omega_max + 1) ** n_features
+        e2 = espectro_2d(clf, w, alpha)
+        por_atributo = [e2.omega_max(i) for i in range(n_features)]
+        previsto = max(omega_previsto(enc, L or PADRAO.L_reup))
         linhas.append(
             {
                 "encoding": enc,
                 "L_reup": L,
-                "omega_max_medido": omega_max,
-                "omega_max_previsto": max(previsto),
-                "omega_max_por_atributo": ";".join(str(v) for v in por_atributo),
-                "n_termos_medido": n_termos_medido,
+                "omega_max_previsto": previsto,
+                **{f"omega_max_x{i + 1}": v for i, v in enumerate(por_atributo)},
                 "n_termos_previsto": n_termos_previsto(enc, n_features, L or PADRAO.L_reup),
+                "n_termos_medido": e2.n_termos,
+                "n_termos_cruzados": e2.n_cruzados,
                 "n_params_circuito": clf.n_params_circuito,
-                "confere": omega_max == max(previsto),
+                "dentro_do_limite": max(por_atributo) <= previsto,
+                "atinge_limite": min(por_atributo) == previsto,
             }
         )
     return pd.DataFrame(linhas)
