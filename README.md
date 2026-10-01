@@ -5,13 +5,16 @@ Código, experimentos e resultados do Trabalho de Conclusão de Curso.
 **A pergunta do trabalho:** como a escolha da codificação de dados clássicos em estados
 quânticos afeta o desempenho e o custo de um classificador variacional? Quatro
 codificações são implementadas e comparadas sob um protocolo idêntico — o ansatz, o
-otimizador, os dados e as sementes ficam congelados, e só a codificação muda.
+otimizador, os dados e as sementes ficam congelados, e só a codificação muda. A exceção
+é o re-uploading, em que as camadas treináveis intercaladas com os dados fazem parte da
+própria definição da codificação.
 
 ## Setup
 
 ```bash
 python -m venv .venv
 .venv\Scripts\activate        # Windows
+source .venv/bin/activate     # Linux e macOS
 pip install -e ".[dev,notebooks]"
 pytest
 ```
@@ -46,14 +49,16 @@ Na ordem, do zero até as tabelas e figuras prontas para o Overleaf:
 python -m tccqml comparar       # a grade: 4 codificações x 3 datasets x 5 sementes
 python -m tccqml varredura      # re-uploading com L = 1..5
 python -m tccqml espectro       # Omega medido por FFT contra a Tabela 5
-python -m tccqml ablacao        # ansatz com e sem CNOTs (Previsão 3)
+python -m tccqml varredura --parametro n-layers   # controle: angle com 1..5 camadas
+python -m tccqml ablacao        # ansatz com e sem CNOTs nos três conjuntos (Previsão 3)
 python -m tccqml diagnostico    # amplitude em [0,pi] contra [-1,1]
 python -m tccqml tabelas        # results/tables/*.tex
 python -m tccqml figuras        # results/figures/*.pdf
 ```
 
-`comparar` leva cerca de 10 minutos e `varredura` cerca de 25 na máquina do autor
-(notebook, CPU, sem GPU); a coluna `segundos` de `por_treino.csv` traz o tempo medido.
+Na máquina do autor (notebook, CPU, sem GPU), `comparar` soma cerca de 8 minutos de
+treino e `varredura` cerca de 15; os demais levam poucos minutos. São tempos de treino,
+somados da coluna `segundos` de cada CSV; o tempo de parede é um pouco maior.
 
 ## Onde cada número do TCC nasce
 
@@ -65,6 +70,8 @@ Nenhum número do Capítulo 4 é digitado à mão: todos saem de um CSV em `resu
 | `tab_custo.tex` | `resumo.csv` | `comparar` → `tabelas` |
 | `tab_convergencia.tex` | `resumo.csv` | `comparar` → `tabelas` |
 | `tab_espectro.tex` | `espectro.csv` | `espectro` → `tabelas` |
+| `tab_ablacao.tex` | `ablacao_entrelacamento.csv` | `ablacao` → `tabelas` |
+| `tab_mesmo_p.tex` | `varredura_L.csv` e `varredura_camadas.csv` | `varredura` (as duas) → `tabelas` |
 | `tab_qualitativa.tex` | `QUALITATIVA`, em `tabelas.py` | `tabelas` |
 | `datasets.pdf` | — | `figuras` |
 | `curvas-treinamento.pdf` | `comparacao.csv` | `comparar` → `figuras` |
@@ -74,7 +81,7 @@ Nenhum número do Capítulo 4 é digitado à mão: todos saem de um CSV em `resu
 | `espectro-reuploading.pdf` | medido na hora | `figuras` |
 | `custo-por-codificacao.pdf` | `resumo.csv` | `comparar` → `figuras` |
 
-As quatro primeiras tabelas são **derivadas e não devem ser editadas à mão**: se um número
+As seis primeiras tabelas são **derivadas e não devem ser editadas à mão**: se um número
 estiver estranho, o lugar de corrigir é o experimento. A `tab_qualitativa` é a exceção —
 a coluna de dificuldade de implementação é julgamento, não medição. Mesmo ela não se
 edita no `.tex`, que `tabelas` sobrescreve: o texto vive na lista `QUALITATIVA`, em
@@ -95,13 +102,18 @@ dados         N = 300, ruído 0.15, split 210/90, circles factor = 0.4, normaliz
 sementes      42, 43, 44, 45, 46
 ```
 
-Duas exceções deliberadas, ambas reportadas como tais e nunca misturadas na comparação
-principal:
+Exceções deliberadas, todas reportadas como tais:
 
 1. o ansatz `local` (sem CNOTs) existe só para a ablação da Previsão 3;
-2. o `amplitude` usa 1 qubit em vez de 2, porque a codificação é assim — e por isso `p`
-   cai de 12 para 6. Toda tabela emite `n_qubits` e `p` para a comparação não ser lida
-   como se fosse de parâmetros iguais.
+2. `varredura --parametro n-layers` muda as camadas do ansatz no angle, como controle da
+   varredura de L (mesmo `p`, espectro fixo); grava num CSV próprio;
+3. o `amplitude` usa 1 qubit em vez de 2, porque a codificação é assim — e por isso `p`
+   cai de 12 para 6;
+4. o `reuploading` não aplica o ansatz depois dos dados: intercala `L` camadas com os
+   blocos de dados, e por isso tem `p = 6L` (18 com `L = 3`).
+
+Toda tabela emite `n_qubits` e `p` para a comparação não ser lida como se fosse de
+parâmetros iguais.
 
 ## Estrutura
 
@@ -115,12 +127,12 @@ src/tccqml/
   train.py          o laço de treinamento
   metrics.py        custo quadrático e acurácia
   circuit_stats.py  qubits, profundidade, portas e custo de gradiente
-  espectro.py       medição do espectro de Fourier por FFT
-  experiments.py    os runners: grade, varredura, ablação, diagnóstico
+  espectro.py       medição do espectro de Fourier por FFT (1D e 2D)
+  experiments.py    os runners: grade, varreduras, ablação, diagnóstico
   tabelas.py        gera .csv e .tex
   figuras.py        gera .pdf vetorial
   cli.py            a linha de comando
-tests/              110 testes
+tests/              119 testes
 notebooks/          exploração visual de uma combinação de cada vez
 results/metrics/    CSVs (não versionados)
 results/tables/     .tex para o Overleaf
