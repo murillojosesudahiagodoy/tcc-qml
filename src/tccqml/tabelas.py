@@ -42,6 +42,15 @@ def _rotulo(chave: str) -> str:
     return ROTULOS.get(chave, str(chave))
 
 
+def _dec(valor: float, casas: int = 3) -> str:
+    """Número com vírgula decimal, como pede a ABNT e como o texto escreve."""
+    return f"{valor:.{casas}f}".replace(".", ",")
+
+
+def _media_desvio(media: float, desvio: float) -> str:
+    return f"{_dec(media)} $\\pm$ {_dec(desvio)}"
+
+
 # Números pequenos vão por extenso na legenda, como manda a ABNT e como as
 # Tabelas 2-5 já escritas fazem. Acima de dez, algarismo.
 _POR_EXTENSO = {
@@ -128,7 +137,7 @@ def tab_acuracia(resumo: pd.DataFrame) -> tuple[pd.DataFrame, str]:
     for dataset in [d for d in ORDEM_DATASETS if d in set(resumo["dataset"])]:
         fatia = resumo[resumo["dataset"] == dataset].set_index("encoding")
         tabela[_rotulo(dataset)] = [
-            f"{fatia.loc[e, 'acc_teste_mean']:.3f} $\\pm$ {fatia.loc[e, 'acc_teste_std']:.3f}"
+            _media_desvio(fatia.loc[e, "acc_teste_mean"], fatia.loc[e, "acc_teste_std"])
             if e in fatia.index
             else ""
             for e in resumo["encoding"].unique()
@@ -237,12 +246,12 @@ def tab_convergencia(resumo: pd.DataFrame) -> tuple[pd.DataFrame, str]:
     for dataset in [d for d in ORDEM_DATASETS if d in set(resumo["dataset"])]:
         fatia = resumo[resumo["dataset"] == dataset].set_index("encoding")
         tabela[_rotulo(dataset)] = [
-            f"{fatia.loc[e, 'epoca_90pct_mean']:.1f}" if e in fatia.index else ""
+            _dec(fatia.loc[e, "epoca_90pct_mean"], 1) if e in fatia.index else ""
             for e in resumo["encoding"].unique()
         ]
     fatia_custo = resumo.groupby("encoding")["custo_final_mean"].mean()
     tabela["Custo final médio"] = [
-        f"{fatia_custo.get(e, float('nan')):.3f}" for e in resumo["encoding"].unique()
+        _dec(fatia_custo.get(e, float("nan"))) for e in resumo["encoding"].unique()
     ]
     tex = to_latex(
         tabela,

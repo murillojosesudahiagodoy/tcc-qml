@@ -96,7 +96,9 @@ def test_tab_acuracia_sai_do_resumo(resumo_falso):
     tabela, tex = tab_acuracia(resumo_falso)
 
     assert next(iter(tabela.columns)) == "Codificação"
-    assert "0.800" in tex and "0.020" in tex
+    # Vírgula decimal, como no texto (ABNT): o .tex é colado sem edição.
+    assert "0,800" in tex and "0,020" in tex
+    assert "0.800" not in tex
 
     # A nota de qubits e p também sai de cada linha do resumo, não de uma frase
     # fixa: mudar p de uma codificação tem que mudar a nota.
