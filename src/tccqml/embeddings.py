@@ -11,7 +11,7 @@ O contrato é o da dataclass ``Encoding``:
   (``None`` quando a codificação não recebe nenhum);
 - ``interleaved=True`` significa que ``apply`` monta o circuito INTEIRO
   (dados e camadas treináveis intercalados) e o ansatz não deve ser chamado
-  depois — é o caso do data re-uploading (Eq. 2.63);
+  depois — é o caso do data re-uploading (Eq. 2.64);
 - ``apply_dados`` isola o bloco de dados, para medir a profundidade da
   codificação separadamente da profundidade total (exigência da Etapa 9).
 
@@ -91,7 +91,7 @@ def _qubits_amplitude(n_features: int) -> int:
 
 
 # --------------------------------------------------------------------------
-# 3. Data re-uploading (Seção 2.4.5, Eq. 2.63)
+# 3. Data re-uploading (Seção 2.4.5, Eq. 2.64)
 # --------------------------------------------------------------------------
 
 
@@ -104,7 +104,7 @@ def _reuploading_dados(x, wires: Sequence[int], params=None, L_reup: int = 3) ->
 def make_reuploading(L_reup: int = 3) -> Encoding:
     """Monta a codificação com re-uploading de `L_reup` blocos de dados.
 
-    Eq. 2.63:  U(x, theta) = W(theta_L) S(x) ... W(theta_1) S(x)
+    Eq. 2.64:  U(x, theta) = W(theta_L) S(x) ... W(theta_1) S(x)
 
     Convenção deste trabalho, fixada aqui para não haver ambiguidade:
     `L_reup` blocos de dados S(x) (cada um um angle encoding) intercalados com
@@ -136,7 +136,7 @@ def make_reuploading(L_reup: int = 3) -> Encoding:
         interleaved=True,
         descricao=(
             f"dados reinseridos em {L_reup} blocos intercalados com camadas "
-            "treináveis (Eq. 2.63); espectro Omega = {-L,...,L}"
+            "treináveis (Eq. 2.64); espectro Omega = {-L,...,L}"
         ),
         apply_dados=dados,
     )
