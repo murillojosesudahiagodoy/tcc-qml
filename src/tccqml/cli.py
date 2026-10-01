@@ -70,8 +70,13 @@ def _parser() -> argparse.ArgumentParser:
     v.add_argument("--valores", type=int, nargs="+", default=list(PADRAO.L_reup_varredura))
     v.add_argument("--sementes", type=int, nargs="+", default=list(PADRAO.sementes))
 
-    a = sub.add_parser("ablacao", help="ablação: ansatz com e sem CNOTs no XOR")
-    a.add_argument("--dataset", default="xor", choices=sorted(_GENERATORS))
+    a = sub.add_parser("ablacao", help="ablação: ansatz com e sem CNOTs")
+    a.add_argument(
+        "--datasets",
+        nargs="+",
+        default=list(PADRAO.datasets_grade),
+        choices=sorted(_GENERATORS),
+    )
     a.add_argument("--encoding", default="angle", choices=sorted(ENCODINGS))
     a.add_argument("--sementes", type=int, nargs="+", default=list(PADRAO.sementes))
 
@@ -186,7 +191,7 @@ def main(argv: list[str] | None = None) -> int:
 
         rodar_ablacao(
             out=args.out,
-            dataset=args.dataset,
+            datasets=tuple(args.datasets),
             encoding=args.encoding,
             sementes=tuple(args.sementes),
         )

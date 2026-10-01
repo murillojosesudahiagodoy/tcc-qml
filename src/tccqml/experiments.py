@@ -267,7 +267,7 @@ def rodar_varredura_L(
 def rodar_ablacao(
     protocolo: Protocolo = PADRAO,
     out: str | Path | None = None,
-    dataset: str = "xor",
+    datasets: tuple[str, ...] | None = None,
     encoding: str = "angle",
     sementes: tuple[int, ...] | None = None,
     verbose: bool = True,
@@ -275,27 +275,35 @@ def rodar_ablacao(
     """Ablação do entrelaçamento do ansatz (Previsão 3, Eq. 2.83).
 
     Roda a mesma configuração com e sem CNOTs no ansatz. Sem entrelaçamento o
-    modelo passa a enxergar só o primeiro atributo e a acurácia no XOR cai para
-    o nível do acaso.
+    estado é produto e <Z_0> só enxerga o primeiro atributo (Eq. 2.83). Isso
+    derruba QUALQUER conjunto que precise do segundo atributo, não só o XOR —
+    por isso a ablação roda nos três conjuntos por padrão: a queda em moons e
+    circles é o controle que mostra o que a ablação de fato mede (dependência
+    do entrelaçamento dado o observável local Z_0).
     """
     out = Path(out or protocolo.out)
+    datasets = datasets or protocolo.datasets_grade
     sementes = sementes or protocolo.sementes
     linhas = []
-    for ansatz in ("strongly_entangling", "local"):
-        for seed in sementes:
-            _, resumo, _ = rodar_um(encoding, dataset, seed, protocolo, ansatz=ansatz)
-            linhas.append(resumo)
-            if verbose:
-                print(f"{ansatz:20s} seed={seed} teste={resumo['acc_teste']:.3f}")
+    for dataset in datasets:
+        for ansatz in ("strongly_entangling", "local"):
+            for seed in sementes:
+                _, resumo, _ = rodar_um(encoding, dataset, seed, protocolo, ansatz=ansatz)
+                linhas.append(resumo)
+                if verbose:
+                    print(
+                        f"{dataset:8s} {ansatz:20s} seed={seed} "
+                        f"teste={resumo['acc_teste']:.3f}"
+                    )
 
     ablacao = pd.DataFrame(linhas)
     metrics = out / "metrics"
     metrics.mkdir(parents=True, exist_ok=True)
     ablacao.to_csv(metrics / "ablacao_entrelacamento.csv", index=False)
     if verbose:
-        medias = ablacao.groupby("ansatz")["acc_teste"].mean()
+        medias = ablacao.groupby(["dataset", "ansatz"])["acc_teste"].mean().unstack()
         print("\nacurácia de teste média:")
-        print(medias.to_string())
+        print(medias.round(3).to_string())
     return ablacao
 
 
