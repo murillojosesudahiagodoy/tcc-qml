@@ -328,15 +328,24 @@ def fig_acuracia_vs_custo(resumo: pd.DataFrame, destino: Path) -> Path:
 
 
 def fig_espectro(destino: Path, L_reups: tuple[int, ...] = (1, 2, 3)) -> Path:
-    """FFT de f(x) para L crescente: Omega_L abrindo com L (Tabela 5).
+    """FFT de f(x) para L crescente, um par de barras por frequência.
 
-    O angle encoding entra como piso de comparação, com Omega = {-1, 0, 1}.
+    Cada atributo é varrido em [0, 2pi) com o outro fixo em pi/2, e os dois
+    aparecem lado a lado: mostrar só o atributo de maior omega esconderia que
+    x_1 para em L - 1 (o anel de CNOTs e a medição de Z_0 desperdiçam o último
+    bloco de dados nesse atributo). O angle entra como piso, com
+    Omega = {-1, 0, 1}.
     """
     configuracoes = [("angle", None, None)] + [
         ("reuploading", {"L_reup": L}, L) for L in L_reups
     ]
+    series = [
+        {"color": "#4c72b0", "hatch": "", "label": r"varrendo $x_1$ ($x_2 = \pi/2$)"},
+        {"color": "#dd8452", "hatch": "///", "label": r"varrendo $x_2$ ($x_1 = \pi/2$)"},
+    ]
+    largura = 0.38
     fig, eixos = plt.subplots(
-        1, len(configuracoes), figsize=(6.5, 2.2), sharey=True, squeeze=False
+        1, len(configuracoes), figsize=(6.5, 2.4), sharey=True, squeeze=False
     )
     for eixo, (encoding, kwargs, L) in zip(eixos[0], configuracoes):
         clf = model.build(encoding, n_features=2, n_layers=PADRAO.n_layers, enc_kwargs=kwargs)
@@ -344,20 +353,33 @@ def fig_espectro(destino: Path, L_reups: tuple[int, ...] = (1, 2, 3)) -> Path:
         # Escala maior nos pesos excita todo o espectro acessível (mesmo
         # motivo de `espectro.tabela_espectro`).
         espectros = espectro_por_atributo(clf, w * 3.0, alpha)
-        melhor = max(espectros, key=lambda e: e.omega_max)
-        n = min(len(melhor.amplitudes), 8)
-        eixo.bar(range(n), melhor.amplitudes[:n], color="#4c72b0", width=0.6)
+        n = 6
+        for k, (esp, serie) in enumerate(zip(espectros, series)):
+            eixo.bar(
+                np.arange(n) + (k - 0.5) * largura,
+                esp.amplitudes[:n],
+                width=largura,
+                color=serie["color"],
+                hatch=serie["hatch"],
+                edgecolor="white" if serie["hatch"] else serie["color"],
+                linewidth=0.0,
+            )
         limite = L if L is not None else 1
         eixo.axvline(limite + 0.5, color="#c44e52", linestyle="--", linewidth=1.1)
         rotulo = NOMES.get(encoding, encoding) + (f", $L = {L}$" if L else "")
         eixo.set_xlabel(f"{rotulo}\n$\\omega$")
         eixo.set_xticks(range(n))
     eixos[0][0].set_ylabel("$|c_\\omega|$")
-    # As barras já são explicadas pelo eixo; só a linha tracejada precisa de
-    # legenda. Fica fora dos painéis: eles são estreitos demais e qualquer
-    # caixa interna encosta na própria linha que ela explica.
-    limite = Line2D([], [], color="#c44e52", linestyle="--", linewidth=1.1, label="limite teórico")
-    fig.legend(handles=[limite], loc="outside upper right", frameon=False)
+    # Fora dos painéis: eles são estreitos demais e qualquer caixa interna
+    # encosta nas barras ou na própria linha que ela explica.
+    itens = [
+        Patch(facecolor=serie["color"], hatch=serie["hatch"], edgecolor="white", label=serie["label"])
+        for serie in series
+    ]
+    itens.append(
+        Line2D([], [], color="#c44e52", linestyle="--", linewidth=1.1, label="limite teórico")
+    )
+    fig.legend(handles=itens, loc="outside upper center", ncol=3, frameon=False)
     return _salvar(fig, "espectro-reuploading.pdf", destino)
 
 
