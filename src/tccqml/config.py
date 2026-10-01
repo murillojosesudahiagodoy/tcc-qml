@@ -51,6 +51,9 @@ class Protocolo:
     datasets_grade: tuple[str, ...] = ("xor", "moons", "circles")
     L_reup: int = 3
     L_reup_varredura: tuple[int, ...] = (1, 2, 3, 4, 5)
+    # Controle da varredura de L: angle com k camadas tem o mesmo p = 6k do
+    # re-uploading com L = k, mas o espectro fixo em {-1, 0, 1}.
+    n_layers_varredura: tuple[int, ...] = (1, 2, 3, 4, 5)
 
     # --- espectro ---
     espectro_n_pontos: int = 512

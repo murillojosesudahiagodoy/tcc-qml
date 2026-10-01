@@ -7,6 +7,7 @@ Cada experimento do trabalho é um subcomando:
     python -m tccqml treinar --encoding reuploading --dataset moons --L-reup 3
     python -m tccqml treinar --encoding angle --dataset xor --ansatz local
     python -m tccqml ablacao
+    python -m tccqml varredura --parametro n-layers
     python -m tccqml diagnostico
     python -m tccqml espectro
     python -m tccqml comparar
@@ -63,11 +64,23 @@ def _parser() -> argparse.ArgumentParser:
     c.add_argument("--encodings", nargs="+", default=list(PADRAO.encodings_grade))
     c.add_argument("--datasets", nargs="+", default=list(PADRAO.datasets_grade))
 
-    v = sub.add_parser("varredura", help="varre o número de blocos L do re-uploading")
-    v.add_argument(
-        "--parametro", default="L-reup", choices=["L-reup"], help="parâmetro varrido"
+    v = sub.add_parser(
+        "varredura",
+        help="varre L do re-uploading ou, como controle, as camadas do angle",
     )
-    v.add_argument("--valores", type=int, nargs="+", default=list(PADRAO.L_reup_varredura))
+    v.add_argument(
+        "--parametro",
+        default="L-reup",
+        choices=["L-reup", "n-layers"],
+        help="L-reup: blocos do re-uploading; n-layers: camadas do ansatz no angle",
+    )
+    v.add_argument(
+        "--valores",
+        type=int,
+        nargs="+",
+        default=None,
+        help="valores varridos (padrão: 1 2 3 4 5)",
+    )
     v.add_argument("--sementes", type=int, nargs="+", default=list(PADRAO.sementes))
 
     a = sub.add_parser("ablacao", help="ablação: ansatz com e sem CNOTs")
@@ -181,11 +194,11 @@ def main(argv: list[str] | None = None) -> int:
             sementes=tuple(args.sementes),
         )
     elif args.comando == "varredura":
-        from tccqml.experiments import rodar_varredura_L
+        from tccqml.experiments import rodar_varredura_camadas, rodar_varredura_L
 
-        rodar_varredura_L(
-            out=args.out, valores=tuple(args.valores), sementes=tuple(args.sementes)
-        )
+        valores = tuple(args.valores) if args.valores else None
+        runner = rodar_varredura_L if args.parametro == "L-reup" else rodar_varredura_camadas
+        runner(out=args.out, valores=valores, sementes=tuple(args.sementes))
     elif args.comando == "ablacao":
         from tccqml.experiments import rodar_ablacao
 

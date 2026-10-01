@@ -14,6 +14,7 @@ portanto, o custo que este mesmo treino teria em hardware real.
 from __future__ import annotations
 
 import time
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -108,6 +109,9 @@ def rodar_um(
         "seed": seed,
         "ansatz": clf.ansatz,
         "L_reup": L_reup if encoding == "reuploading" else np.nan,
+        # Só faz diferença nas codificações que aplicam o ansatz depois do
+        # bloco de dados; no re-uploading quem dita as camadas é `L_reup`.
+        "n_layers": protocolo.n_layers if encoding != "reuploading" else np.nan,
         "acc_treino": r.acc_treino,
         "acc_teste": r.acc_teste,
         "custo_final": float(hist["custo"].iloc[-1]),
@@ -261,6 +265,57 @@ def rodar_varredura_L(
     varredura.to_csv(metrics / "varredura_L.csv", index=False)
     if verbose:
         print(f"escrito em {metrics / 'varredura_L.csv'}")
+    return varredura
+
+
+def rodar_varredura_camadas(
+    protocolo: Protocolo = PADRAO,
+    out: str | Path | None = None,
+    valores: tuple[int, ...] | None = None,
+    datasets: tuple[str, ...] | None = None,
+    sementes: tuple[int, ...] | None = None,
+    encoding: str = "angle",
+    verbose: bool = True,
+) -> pd.DataFrame:
+    """Varredura do número de camadas do ansatz numa codificação fixa.
+
+    É o controle da varredura de L. No re-uploading, aumentar L aumenta ao
+    mesmo tempo as frequências acessíveis e o número de parâmetros. No angle,
+    aumentar `n_layers` aumenta só os parâmetros: o espectro continua
+    Omega = {-1, 0, 1} por atributo (Tabela 5). Com dois qubits os dois têm
+    p = 6 por camada, então angle com k camadas e re-uploading com L = k têm o
+    mesmo p, e a diferença de acurácia entre eles é atribuível à frequência.
+
+    Sai do protocolo congelado de propósito (`n_layers` muda) e por isso
+    grava num CSV próprio, que nunca entra na comparação principal.
+    """
+    out = Path(out or protocolo.out)
+    valores = valores or protocolo.n_layers_varredura
+    datasets = datasets or protocolo.datasets_grade
+    sementes = sementes or protocolo.sementes
+
+    linhas = []
+    total = len(valores) * len(datasets) * len(sementes)
+    i = 0
+    for n_layers in valores:
+        variante = replace(protocolo, n_layers=n_layers)
+        for dataset in datasets:
+            for seed in sementes:
+                i += 1
+                _, resumo, _ = rodar_um(encoding, dataset, seed, variante)
+                linhas.append(resumo)
+                if verbose:
+                    print(
+                        f"[{i:3d}/{total}] {encoding} n_layers={n_layers} "
+                        f"{dataset:8s} seed={seed} teste={resumo['acc_teste']:.3f}"
+                    )
+
+    varredura = pd.DataFrame(linhas)
+    metrics = out / "metrics"
+    metrics.mkdir(parents=True, exist_ok=True)
+    varredura.to_csv(metrics / "varredura_camadas.csv", index=False)
+    if verbose:
+        print(f"escrito em {metrics / 'varredura_camadas.csv'}")
     return varredura
 
 
