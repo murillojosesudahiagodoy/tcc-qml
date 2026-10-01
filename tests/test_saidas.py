@@ -8,7 +8,14 @@ import pandas as pd
 import pytest
 
 from tccqml import cli
-from tccqml.tabelas import tab_acuracia, tab_custo, tab_qualitativa, to_latex
+from tccqml.tabelas import (
+    tab_ablacao,
+    tab_acuracia,
+    tab_custo,
+    tab_mesmo_p,
+    tab_qualitativa,
+    to_latex,
+)
 
 
 @pytest.fixture
@@ -134,6 +141,42 @@ def test_tab_custo_reporta_os_itens_da_etapa_9(resumo_falso):
 
     for coluna in ("Qubits", "$p$", "Prof. total", "Prof. codif.", "Portas 1q", "Portas 2q"):
         assert coluna in tabela.columns
+
+
+def test_tab_ablacao_tem_uma_coluna_por_conjunto():
+    """A ablação roda nos três conjuntos: a queda não é só do XOR."""
+    ablacao = pd.DataFrame(
+        [
+            {"dataset": d, "ansatz": a, "seed": s, "acc_teste": v}
+            for d in ("xor", "moons")
+            for a, v in (("strongly_entangling", 0.9), ("local", 0.5))
+            for s in (42, 43)
+        ]
+    )
+
+    tabela, tex = tab_ablacao(ablacao)
+
+    assert list(tabela.columns) == ["\\textit{Ansatz}", "XOR", "\\textit{Moons}"]
+    assert "0,900 $\\pm$ 0,000" in tex and "0,500" in tex
+
+
+def test_tab_mesmo_p_recusa_p_diferente():
+    """A comparação só vale entre modelos com o mesmo p; se não, é erro."""
+
+    def varredura(coluna: str, p_por_k: dict[int, int]) -> pd.DataFrame:
+        return pd.DataFrame(
+            [
+                {coluna: k, "dataset": "moons", "acc_teste": 0.8, "n_params_circuito": p}
+                for k, p in p_por_k.items()
+                for _ in range(2)
+            ]
+        )
+
+    tabela, _ = tab_mesmo_p(varredura("L_reup", {1: 6, 2: 12}), varredura("n_layers", {1: 6, 2: 12}))
+    assert list(tabela["$p$"]) == [6, 12]
+
+    with pytest.raises(ValueError, match="p diferente"):
+        tab_mesmo_p(varredura("L_reup", {1: 6}), varredura("n_layers", {1: 7}))
 
 
 def test_tab_qualitativa_cobre_as_quatro_codificacoes():

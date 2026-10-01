@@ -6,9 +6,9 @@ Cada tabela sai em dois formatos: `.csv` (para conferir e reprocessar) e
 das Tabelas 2-5 que já estão no texto, e usa só `tabular` e `\\hline` — nenhum
 pacote novo precisa ser carregado.
 
-Quatro das cinco tabelas são DERIVADAS dos CSVs de `results/metrics/` e não
+Seis das sete tabelas são DERIVADAS dos CSVs de `results/metrics/` e não
 devem ser editadas à mão: se um número estiver estranho, o lugar de corrigir é
-o experimento, não a tabela. A quinta (`tab_qualitativa`) é julgamento do autor
+o experimento, não a tabela. A sétima (`tab_qualitativa`) é julgamento do autor
 e tem uma coluna que só se sabe depois de implementar.
 """
 
@@ -311,6 +311,80 @@ def tab_espectro(espectro: pd.DataFrame) -> tuple[pd.DataFrame, str]:
 
 
 # --------------------------------------------------------------------------
+# tab_ablacao — o que some quando o ansatz perde as CNOTs
+# --------------------------------------------------------------------------
+
+
+def tab_ablacao(ablacao: pd.DataFrame) -> tuple[pd.DataFrame, str]:
+    """Acurácia de teste com e sem CNOTs no ansatz, por conjunto de dados.
+
+    Os três conjuntos aparecem porque a queda não é específica do XOR: sem
+    CNOTs, <Z_0> só enxerga x_1 (Eq. 2.83), e qualquer conjunto que precise de
+    x_2 cai.
+    """
+    agregado = ablacao.groupby(["dataset", "ansatz"])["acc_teste"].agg(["mean", "std"])
+    datasets = [d for d in ORDEM_DATASETS if d in set(ablacao["dataset"])]
+    nomes = {"strongly_entangling": "Com CNOTs", "local": "Sem CNOTs"}
+    tabela = pd.DataFrame({"\\textit{Ansatz}": [nomes[a] for a in nomes]})
+    for dataset in datasets:
+        tabela[_rotulo(dataset)] = [
+            _media_desvio(*agregado.loc[(dataset, a)]) if (dataset, a) in agregado.index else ""
+            for a in nomes
+        ]
+    tex = to_latex(
+        tabela,
+        caption=(
+            "Acurácia de teste do \\textit{angle} com e sem portas de dois qubits "
+            "no \\textit{ansatz} (mesmo $p$)."
+        ),
+        label="tab:ablacao",
+    )
+    return tabela, tex
+
+
+# --------------------------------------------------------------------------
+# tab_mesmo_p — frequência contra número de parâmetros
+# --------------------------------------------------------------------------
+
+
+def tab_mesmo_p(
+    varredura_L: pd.DataFrame, varredura_camadas: pd.DataFrame
+) -> tuple[pd.DataFrame, str]:
+    """Re-uploading com L blocos contra angle com L camadas: mesmo p.
+
+    Com dois qubits os dois modelos têm p = 6L. O que muda é o espectro: o
+    angle fica em Omega = {-1, 0, 1} por atributo, o re-uploading vai até L.
+    """
+    reup = varredura_L.groupby(["L_reup", "dataset"])["acc_teste"].agg(["mean", "std"])
+    angle = varredura_camadas.groupby(["n_layers", "dataset"])["acc_teste"].agg(["mean", "std"])
+    p_reup = varredura_L.groupby("L_reup")["n_params_circuito"].first()
+    p_angle = varredura_camadas.groupby("n_layers")["n_params_circuito"].first()
+    valores = sorted(set(p_reup.index.astype(int)) & set(p_angle.index.astype(int)))
+    datasets = [d for d in ORDEM_DATASETS if d in set(varredura_L["dataset"])]
+
+    linhas = []
+    for k in valores:
+        if int(p_reup.loc[k]) != int(p_angle.loc[k]):
+            raise ValueError(f"p diferente para k = {k}: a comparação deixa de ser de mesmo p")
+        linha = {"$L$ ou camadas": k, "$p$": int(p_reup.loc[k])}
+        for dataset in datasets:
+            linha[f"{_rotulo(dataset)} (\\textit{{angle}})"] = _media_desvio(*angle.loc[(k, dataset)])
+            linha[f"{_rotulo(dataset)} (\\textit{{re-up.}})"] = _media_desvio(*reup.loc[(k, dataset)])
+        linhas.append(linha)
+    tabela = pd.DataFrame(linhas)
+    tex = to_latex(
+        tabela,
+        caption=(
+            "Acurácia de teste do \\textit{angle} com $k$ camadas no \\textit{ansatz} "
+            "contra o \\textit{re-uploading} com $L = k$ blocos: mesmo $p$, espectros diferentes."
+        ),
+        label="tab:mesmo-p",
+        alinhamento="cc" + "c" * (2 * len(datasets)),
+    )
+    return tabela, tex
+
+
+# --------------------------------------------------------------------------
 # tab_qualitativa — a única preenchida à mão
 # --------------------------------------------------------------------------
 
@@ -410,6 +484,17 @@ def gerar_todas(out: str | Path = "results", verbose: bool = True) -> list[Path]
     if espectro is not None:
         df, tex = tab_espectro(espectro)
         gerados.append(_escrever(df, tex, "tab_espectro", destino))
+
+    ablacao = _ler("ablacao_entrelacamento.csv")
+    if ablacao is not None:
+        df, tex = tab_ablacao(ablacao)
+        gerados.append(_escrever(df, tex, "tab_ablacao", destino))
+
+    varredura_L = _ler("varredura_L.csv")
+    varredura_camadas = _ler("varredura_camadas.csv")
+    if varredura_L is not None and varredura_camadas is not None:
+        df, tex = tab_mesmo_p(varredura_L, varredura_camadas)
+        gerados.append(_escrever(df, tex, "tab_mesmo_p", destino))
 
     df, tex = tab_qualitativa()
     gerados.append(_escrever(df, tex, "tab_qualitativa", destino))
