@@ -118,7 +118,9 @@ def fig_datasets(destino: Path) -> Path:
         eixo.set_xlim(-0.2, np.pi + 0.2)
         eixo.set_ylim(-0.2, np.pi + 0.2)
     np.atleast_1d(eixos)[0].set_ylabel("$x_2$")
-    np.atleast_1d(eixos)[-1].legend(loc="upper right", framealpha=0.9)
+    # Acima dos painéis: dentro deles a caixa cobre pontos do circles.
+    alcas, rotulos = np.atleast_1d(eixos)[0].get_legend_handles_labels()
+    fig.legend(alcas, rotulos, loc="outside upper center", ncol=2, frameon=False)
     return _salvar(fig, "datasets.pdf", destino)
 
 
