@@ -122,6 +122,7 @@ def _listar() -> None:
     for campo in (
         "n_samples",
         "noise",
+        "val_size",
         "test_size",
         "n_layers",
         "epocas",
@@ -138,6 +139,7 @@ def _treinar(args) -> None:
         args.dataset,
         n_samples=args.n_samples,
         noise=PADRAO.noise,
+        val_size=PADRAO.val_size,
         test_size=PADRAO.test_size,
         seed=args.seed,
     )
@@ -167,7 +169,10 @@ def _treinar(args) -> None:
         seed=args.seed,
         verbose=True,
     )
-    print(f"\nacurácia  treino={r.acc_treino:.3f}  teste={r.acc_teste:.3f}")
+    print(
+        f"\nacurácia (época {r.epoca_escolhida})  treino={r.acc_treino:.3f}  "
+        f"val={r.acc_val:.3f}  teste={r.acc_teste:.3f}"
+    )
 
     if args.salvar:
         destino = Path(args.out) / "metrics"

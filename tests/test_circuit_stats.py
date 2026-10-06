@@ -1,8 +1,9 @@
 """Testes das contagens de recurso — confronto direto com o texto.
 
 Estes testes não verificam que o código roda, e sim que ele reproduz os
-números impressos no TCC (Tabelas 2 e 3, Eqs. 2.47 e 2.48). Se um deles
-falhar, ou o código está errado ou o texto está.
+números impressos no TCC (Tabelas 2 e 3, Eq. 2.47). Se um deles falhar,
+ou o código está errado ou o texto está. A exceção é a contagem por passo:
+o código usa (2p + 1)|B|S, que corrige os 2p|B|S da Eq. 2.48 do texto.
 """
 
 import numpy as np
@@ -10,8 +11,10 @@ import pytest
 
 from tccqml import model
 from tccqml.circuit_stats import (
-    avaliacoes_por_gradiente,
-    n_execucoes_hardware,
+    aval_derivadas_amostra,
+    aval_gradiente_amostra,
+    n_aval_passo,
+    n_shots_passo,
     stats,
     stats_ansatz,
 )
@@ -36,7 +39,7 @@ def test_tabela_2_configuracao_de_referencia():
     assert s["n_params_circuito"] == 12
     assert s["gates_1q"] == 12
     assert s["gates_2q"] == 4
-    assert s["avaliacoes_por_gradiente"] == 24
+    assert s["aval_derivadas_amostra"] == 24
 
 
 @pytest.mark.parametrize("n,L", [(2, 2), (3, 2), (2, 4), (5, 3)])
@@ -47,7 +50,8 @@ def test_tabela_2_formulas_gerais(n, L):
     assert s["n_params_circuito"] == 3 * L * n
     assert s["gates_1q"] == 3 * L * n
     assert s["gates_2q"] == L * n
-    assert s["avaliacoes_por_gradiente"] == 6 * L * n
+    assert s["aval_derivadas_amostra"] == 6 * L * n
+    assert s["aval_gradiente_amostra"] == 6 * L * n + 1
 
 
 def test_ansatz_local_nao_tem_portas_de_dois_qubits():
@@ -59,37 +63,98 @@ def test_ansatz_local_nao_tem_portas_de_dois_qubits():
 
 
 # --------------------------------------------------------------------------
-# Eq. 2.47 e Eq. 2.48 — custo do gradiente
+# Custo do gradiente em hardware: (2p + 1) por amostra, |B| amostras, S shots
 # --------------------------------------------------------------------------
 
 
-def test_eq_2_47_duas_avaliacoes_por_parametro():
-    assert avaliacoes_por_gradiente(12) == 24
+def test_eq_2_47_duas_avaliacoes_deslocadas_por_parametro():
+    """As 2p avaliações deslocadas dão só as derivadas parciais de f(x)."""
+    assert aval_derivadas_amostra(12) == 24
 
 
-def test_eq_2_48_da_504_000_na_configuracao_de_referencia():
-    """N_circ = 2 p |B| shots = 2 * 12 * 21 * 1000 = 504 000 (p. 36 do texto)."""
-    assert n_execucoes_hardware(n_params_circuito=12, batch_size=21, shots=1000) == 504_000
+def test_gradiente_do_custo_quadratico_precisa_do_residuo():
+    """O gradiente de (f + b - y)^2 pede f(x) sem deslocamento: 2p + 1."""
+    assert aval_gradiente_amostra(12) == 25
+    assert aval_gradiente_amostra(12) == aval_derivadas_amostra(12) + 1
+
+
+def test_avaliacoes_e_shots_por_passo_separados():
+    """(2p + 1)|B| avaliações e (2p + 1)|B|S shots, em funções distintas."""
+    assert n_aval_passo(n_params_circuito=12, batch_size=20) == 500
+    assert n_shots_passo(n_params_circuito=12, batch_size=20, shots=1000) == 500_000
 
 
 def test_o_vies_nao_entra_no_custo_do_gradiente():
     """São 12 parâmetros no circuito, não 13: a derivada do viés é clássica."""
     clf = model.build("angle", n_features=2, n_layers=2)
-    s = stats(clf, X_EXEMPLO, batch_size=21, shots=1000)
+    s = stats(clf, X_EXEMPLO, batch_size=20, shots=1000)
 
     assert s["n_params_modelo"] == 13
     assert s["n_params_circuito"] == 12
-    assert s["n_execucoes_hardware"] == 504_000
+    assert s["aval_derivadas_amostra"] == 24
+    assert s["aval_gradiente_amostra"] == 25
+    assert s["n_aval_passo"] == 500
+    assert s["n_shots_passo"] == 500_000
 
 
-def test_batch_efetivo_do_protocolo_e_21():
-    """O |B| = 21 da Eq. 2.48 sai do protocolo, não de um número escolhido à mão.
+def test_custo_por_passo_do_angle_com_o_protocolo_padrao():
+    """|B| e S saem do protocolo, não de números escolhidos à mão.
 
-    São 210 amostras de treino divididas em 10 lotes por `np.array_split`.
+    Com o split 180/60/60 são 180 amostras de treino divididas em 9 lotes por
+    `np.array_split`, então |B| = 20; com S = 1000 e p = 12 (angle) são
+    (2 * 12 + 1) * 20 = 500 avaliações e 500 000 shots por passo.
     """
     from tccqml.config import PADRAO
 
-    assert PADRAO.batch_efetivo == 21
+    assert PADRAO.batch_efetivo == 20
+    assert PADRAO.shots == 1000
+    clf = model.build("angle", n_features=2, n_layers=PADRAO.n_layers)
+    s = stats(clf, X_EXEMPLO, batch_size=PADRAO.batch_efetivo, shots=PADRAO.shots)
+
+    assert s["n_params_circuito"] == 12
+    assert s["n_aval_passo"] == 500
+    assert s["n_shots_passo"] == 500_000
+
+
+# --------------------------------------------------------------------------
+# Seção 3.8 — bloco de codificação e circuito completo, separados
+# --------------------------------------------------------------------------
+
+
+def test_contagens_do_angle_bloco_e_circuito_completo():
+    """Angle com L_var = 2 e d = 2: o que a Seção 3.8 manda reportar.
+
+    O bloco de codificação são dois RY em paralelo (2 portas, profundidade 1,
+    nenhuma CNOT); as 4 CNOTs do circuito completo são todas do ansatz.
+    """
+    clf = model.build("angle", n_features=2, n_layers=2)
+    s = stats(clf, X_EXEMPLO)
+
+    assert s["gates_1q_encoding"] == 2
+    assert s["gates_2q_encoding"] == 0
+    assert s["gates_total_encoding"] == 2
+    assert s["depth_encoding"] == 1
+    assert s["n_qubits"] == 2
+    assert s["gates_2q"] == 4
+
+
+@pytest.mark.parametrize("encoding", ["angle", "amplitude", "reuploading", "zz"])
+def test_portas_totais_somam_1q_e_2q(encoding):
+    """Total = 1q + 2q, no circuito completo e no bloco de codificação."""
+    kwargs = {"enc_kwargs": {"L_reup": 3}} if encoding == "reuploading" else {}
+    s = _stats(encoding, **kwargs)
+
+    assert s["gates_1q"] + s["gates_2q"] == s["gates_total"]
+    assert s["gates_1q_encoding"] + s["gates_2q_encoding"] == s["gates_total_encoding"]
+
+
+def test_colunas_de_custo_cobrem_a_secao_3_8():
+    """O CSV da grade grava o que a Seção 3.8 promete, para os dois níveis."""
+    from tccqml.experiments import COLUNAS_CUSTO
+
+    for coluna in ("n_qubits", "depth", "gates_total", "gates_2q",
+                   "depth_encoding", "gates_total_encoding", "gates_2q_encoding"):
+        assert coluna in COLUNAS_CUSTO
 
 
 # --------------------------------------------------------------------------

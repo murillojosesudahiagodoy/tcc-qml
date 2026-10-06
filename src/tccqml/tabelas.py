@@ -18,6 +18,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from tccqml.config import PADRAO
 from tccqml.espectro import ENCODINGS_COM_ESPECTRO
 
 FONTE = "Fonte: Elaborada pelo autor."
@@ -87,10 +88,36 @@ def to_latex(
     label: str,
     alinhamento: str | None = None,
     nota: str | None = None,
+    grupos: list[tuple[str, int]] | None = None,
+    cabecalho: list[str] | None = None,
+    preambulo: list[str] | None = None,
 ) -> str:
-    """Um ambiente `table` completo, colável direto no Overleaf."""
+    """Um ambiente `table` completo, colável direto no Overleaf.
+
+    `grupos` acrescenta uma linha acima do cabeçalho, como lista de
+    (rótulo, número de colunas); rótulo vazio deixa as colunas sem grupo.
+    `cabecalho` troca os nomes das colunas só no `.tex` — o `.csv` mantém os
+    de `df`, que precisam ser únicos —, o que permite repetir "Prof." em dois
+    grupos. `preambulo` entra logo depois do `\\centering` (tamanho da fonte,
+    espaçamento entre colunas) e só vale dentro da tabela.
+    """
     alinhamento = alinhamento or "l" + "c" * (df.shape[1] - 1)
-    cabecalho = " & ".join(str(c) for c in df.columns) + " \\\\"
+    nomes = cabecalho or [str(c) for c in df.columns]
+    if len(nomes) != df.shape[1]:
+        raise ValueError("cabecalho precisa ter um nome por coluna")
+    linhas_grupo: list[str] = []
+    if grupos:
+        if sum(n for _, n in grupos) != df.shape[1]:
+            raise ValueError("os grupos precisam cobrir exatamente as colunas")
+        celulas, regras, inicio = [], [], 1
+        for rotulo, n in grupos:
+            if rotulo:
+                celulas.append(f"\\multicolumn{{{n}}}{{c}}{{{rotulo}}}")
+                regras.append(f"\\cline{{{inicio}-{inicio + n - 1}}}")
+            else:
+                celulas.extend([""] * n)
+            inicio += n
+        linhas_grupo = [" & ".join(celulas) + " \\\\", " ".join(regras)]
     corpo = [
         " & ".join("" if pd.isna(v) else str(v) for v in linha) + " \\\\"
         for linha in df.itertuples(index=False)
@@ -98,11 +125,13 @@ def to_latex(
     partes = [
         "\\begin{table}[htb]",
         "\\centering",
+        *(preambulo or []),
         f"\\caption{{{caption}}}",
         f"\\label{{{label}}}",
         f"\\begin{{tabular}}{{{alinhamento}}}",
         "\\hline",
-        cabecalho,
+        *linhas_grupo,
+        " & ".join(nomes) + " \\\\",
         "\\hline",
         *corpo,
         "\\hline",
@@ -131,6 +160,11 @@ def tab_acuracia(resumo: pd.DataFrame) -> tuple[pd.DataFrame, str]:
 
     O desvio fica na tabela de propósito: com poucas sementes, diferença menor
     que o desvio não sustenta afirmação no Capítulo 4.
+
+    Cada acurácia é a do modelo da época escolhida pela validação, medida uma
+    única vez no teste. A `acc_val` fica só no `resumo.csv`: com três
+    conjuntos, uma coluna de validação ao lado de cada um dobraria a largura
+    da tabela além do que cabe na página.
     """
     resumo = _ordenar(resumo, "encoding", ORDEM_ENCODINGS)
     tabela = pd.DataFrame({"Codificação": [_rotulo(e) for e in resumo["encoding"].unique()]})
@@ -152,7 +186,8 @@ def tab_acuracia(resumo: pd.DataFrame) -> tuple[pd.DataFrame, str]:
     tex = to_latex(
         tabela,
         caption=(
-            "Acurácia no conjunto de teste por codificação e conjunto de dados "
+            "Acurácia no conjunto de teste por codificação e conjunto de dados, "
+            "com o modelo da época de maior acurácia de validação "
             f"(média $\\pm$ desvio padrão {sobre})."
         ),
         label="tab:acuracia",
@@ -188,29 +223,120 @@ def _nota_recursos(resumo: pd.DataFrame) -> str | None:
 # --------------------------------------------------------------------------
 
 
+def _colunas_de_custo_por_passo(custo: pd.DataFrame) -> pd.DataFrame:
+    """Garante as contagens de avaliações e shots, derivadas de `p`.
+
+    São analíticas: dependem só de `n_params_circuito`, de |B| e de S. Um
+    `resumo.csv` gerado antes da correção (2p + 1) não tem essas colunas; elas
+    são então recalculadas com as mesmas funções de `circuit_stats` e o |B| e o
+    S do protocolo, em vez de exigir a grade inteira de novo para uma conta.
+    """
+    from tccqml.circuit_stats import (
+        aval_derivadas_amostra,
+        aval_gradiente_amostra,
+        n_aval_passo,
+        n_shots_passo,
+    )
+
+    p = custo["n_params_circuito"].astype(int)
+    derivadas = {
+        "aval_derivadas_amostra": p.map(aval_derivadas_amostra),
+        "aval_gradiente_amostra": p.map(aval_gradiente_amostra),
+        "n_aval_passo": p.map(lambda v: n_aval_passo(v, PADRAO.batch_efetivo)),
+        "n_shots_passo": p.map(lambda v: n_shots_passo(v, PADRAO.batch_efetivo, PADRAO.shots)),
+    }
+    for coluna, valores in derivadas.items():
+        if coluna not in custo.columns:
+            custo = custo.assign(**{coluna: valores})
+    return custo
+
+
+def _milhar(valor: int) -> str:
+    """Inteiro com espaço fino de milhar no LaTeX, como o texto escreve 504 000."""
+    return f"{int(valor):,}".replace(",", "\\,")
+
+
+# Contagens de portas que a Seção 3.8 promete, gravadas por `comparar` desde que
+# `COLUNAS_CUSTO` passou a incluí-las. Um `resumo.csv` anterior não as tem.
+_PORTAS = ("gates_total", "gates_1q_encoding", "gates_2q_encoding", "gates_total_encoding")
+
+
+def _colunas_de_portas(custo: pd.DataFrame) -> pd.DataFrame:
+    """Garante as contagens de portas, medindo o circuito quando faltam.
+
+    São estáticas: dependem só da arquitetura, não do treino. Quando o
+    `resumo.csv` é anterior a essas colunas, cada circuito é montado de novo
+    com o protocolo da grade (`n_layers`, `L_reup`) e medido pela mesma
+    `stats()` que os runners usam — sem treino e sem número escrito à mão.
+    """
+    faltando = [c for c in _PORTAS if c not in custo.columns]
+    if not faltando:
+        return custo
+    from tccqml import model
+    from tccqml.circuit_stats import stats
+    from tccqml.config import PADRAO
+
+    medidas = {}
+    for encoding in custo["encoding"]:
+        clf = model.build(
+            encoding,
+            n_features=2,
+            n_layers=PADRAO.n_layers,
+            enc_kwargs={"L_reup": PADRAO.L_reup} if encoding == "reuploading" else None,
+        )
+        # A estrutura do circuito não depende do valor do dado, só da forma.
+        medidas[encoding] = stats(clf, [0.3, 1.2])
+    return custo.assign(
+        **{c: [medidas[e][c] for e in custo["encoding"]] for c in faltando}
+    )
+
+
 def tab_custo(resumo: pd.DataFrame) -> tuple[pd.DataFrame, str]:
-    """Os itens que a Etapa 9 manda registrar, um por coluna."""
-    colunas = [
-        "n_qubits",
-        "n_params_circuito",
-        "depth",
-        "depth_encoding",
-        "gates_1q",
-        "gates_2q",
-        "avaliacoes_por_gradiente",
+    """Recursos do bloco de codificação e do circuito completo, e custo por passo.
+
+    O bloco de codificação e o circuito completo vêm em grupos separados
+    (Seção 3.8): profundidade, portas totais e portas de dois qubits de cada
+    um, mais os qubits do circuito. As contagens de hardware vêm em colunas
+    separadas: avaliações do circuito (quantos circuitos distintos por passo)
+    e shots (quantas execuções). As 2p avaliações deslocadas ficam ao lado
+    para comparação com a Eq. 2.47, mas o custo do gradiente é 2p + 1 por
+    amostra, por causa do resíduo.
+    """
+    colunas = ["n_qubits", "n_params_circuito", "depth", "depth_encoding", "gates_2q"]
+    extras = [
+        c
+        for c in (
+            *_PORTAS,
+            "aval_derivadas_amostra",
+            "aval_gradiente_amostra",
+            "n_aval_passo",
+            "n_shots_passo",
+        )
+        if c in resumo.columns
     ]
-    custo = resumo.groupby("encoding", as_index=False)[colunas].first()
+    custo = resumo.groupby("encoding", as_index=False)[colunas + extras].first()
+    custo = _colunas_de_portas(custo)
+    custo = _colunas_de_custo_por_passo(custo)
     custo = _ordenar(custo, "encoding", ORDEM_ENCODINGS)
+
+    def inteiros(coluna: str):
+        return custo[coluna].astype(int).values
+
     tabela = pd.DataFrame(
         {
             "Codificação": [_rotulo(e) for e in custo["encoding"]],
-            "Qubits": custo["n_qubits"].astype(int).values,
-            "$p$": custo["n_params_circuito"].astype(int).values,
-            "Prof. total": custo["depth"].astype(int).values,
-            "Prof. codif.": custo["depth_encoding"].astype(int).values,
-            "Portas 1q": custo["gates_1q"].astype(int).values,
-            "Portas 2q": custo["gates_2q"].astype(int).values,
-            "Aval./grad.": custo["avaliacoes_por_gradiente"].astype(int).values,
+            "$p$": inteiros("n_params_circuito"),
+            "Codif.: prof.": inteiros("depth_encoding"),
+            "Codif.: portas": inteiros("gates_total_encoding"),
+            "Codif.: CNOTs": inteiros("gates_2q_encoding"),
+            "Circuito: qubits": inteiros("n_qubits"),
+            "Circuito: prof.": inteiros("depth"),
+            "Circuito: portas": inteiros("gates_total"),
+            "Circuito: CNOTs": inteiros("gates_2q"),
+            "Desloc. ($2p$)": inteiros("aval_derivadas_amostra"),
+            "Aval./amostra": inteiros("aval_gradiente_amostra"),
+            "Aval./passo": inteiros("n_aval_passo"),
+            "\\textit{Shots}/passo": [_milhar(v) for v in custo["n_shots_passo"]],
         }
     )
     tex = to_latex(
@@ -221,9 +347,36 @@ def tab_custo(resumo: pd.DataFrame) -> tuple[pd.DataFrame, str]:
             "decomposto nas portas básicas."
         ),
         label="tab:custo",
+        grupos=[
+            ("", 2),
+            ("Bloco de codificação", 3),
+            ("Circuito completo", 4),
+            ("Custo por passo", 4),
+        ],
+        # Cabeçalhos longos em duas linhas (`\shortstack`, LaTeX básico): com
+        # 13 colunas, numa linha só a tabela passa da margem da página A4.
+        cabecalho=[
+            "Codificação", "$p$",
+            "Prof.", "Portas", "CNOTs",
+            "Qubits", "Prof.", "Portas", "CNOTs",
+            "\\shortstack{Desloc.\\\\($2p$)}",
+            "\\shortstack{Aval./\\\\amostra}",
+            "\\shortstack{Aval./\\\\passo}",
+            "\\shortstack{\\textit{Shots}/\\\\passo}",
+        ],
+        preambulo=["\\footnotesize", "\\setlength{\\tabcolsep}{2pt}"],
         nota=(
-            "\\textit{Aval./grad.} é analítico (Eq.~2.47): o treino usa "
-            "retropropagação sobre o simulador, não \\textit{parameter-shift}."
+            "Portas: total de portas básicas (rotações de um qubit e CNOTs); "
+            "CNOTs: portas de dois qubits. O bloco de codificação usa os mesmos "
+            "qubits do circuito completo. "
+            "Custo por passo: o que um passo do otimizador custaria em "
+            "\\textit{hardware}. Contagens de gradiente analíticas: o treino usa retropropagação "
+            "sobre o simulador, não \\textit{parameter-shift}. "
+            "\\textit{Desloc.}: só as $2p$ avaliações deslocadas que dão as "
+            "derivadas (Eq.~2.47). \\textit{Aval./amostra}: $2p + 1$, com a "
+            "avaliação sem deslocamento que dá o resíduo $f(x) + b - y$ do custo "
+            "quadrático. \\textit{Aval./passo}: $(2p + 1)|B|$. "
+            "\\textit{Shots/passo}: $(2p + 1)|B|S$, com $S$ \\textit{shots} por avaliação."
         ),
     )
     return tabela, tex

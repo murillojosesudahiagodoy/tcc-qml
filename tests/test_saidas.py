@@ -25,10 +25,16 @@ def resumo_falso() -> pd.DataFrame:
     custos = {
         "angle": {"n_qubits": 2, "n_params_circuito": 12, "depth": 11,
                   "depth_encoding": 1, "gates_1q": 14, "gates_2q": 4,
-                  "avaliacoes_por_gradiente": 24},
+                  "gates_total": 18, "gates_1q_encoding": 2, "gates_2q_encoding": 0,
+                  "gates_total_encoding": 2,
+                  "aval_derivadas_amostra": 24, "aval_gradiente_amostra": 25,
+                  "n_aval_passo": 500, "n_shots_passo": 500_000},
         "amplitude": {"n_qubits": 1, "n_params_circuito": 6, "depth": 8,
                       "depth_encoding": 2, "gates_1q": 8, "gates_2q": 0,
-                      "avaliacoes_por_gradiente": 12},
+                      "gates_total": 8, "gates_1q_encoding": 2, "gates_2q_encoding": 0,
+                      "gates_total_encoding": 2,
+                      "aval_derivadas_amostra": 12, "aval_gradiente_amostra": 13,
+                      "n_aval_passo": 260, "n_shots_passo": 260_000},
     }
     for encoding, custo in custos.items():
         for dataset in ("xor", "moons"):
@@ -139,8 +145,54 @@ def test_legenda_conta_as_sementes_do_csv(resumo_falso):
 def test_tab_custo_reporta_os_itens_da_etapa_9(resumo_falso):
     tabela, _ = tab_custo(resumo_falso)
 
-    for coluna in ("Qubits", "$p$", "Prof. total", "Prof. codif.", "Portas 1q", "Portas 2q"):
+    for coluna in ("$p$", "Codif.: prof.", "Codif.: portas", "Codif.: CNOTs",
+                   "Circuito: qubits", "Circuito: prof.", "Circuito: portas",
+                   "Circuito: CNOTs"):
         assert coluna in tabela.columns
+
+
+def test_tab_custo_separa_bloco_de_codificacao_do_circuito_completo(resumo_falso):
+    tabela, tex = tab_custo(resumo_falso)
+    angle = tabela.iloc[0]
+
+    assert (angle["Codif.: prof."], angle["Codif.: portas"], angle["Codif.: CNOTs"]) == (1, 2, 0)
+    assert (angle["Circuito: qubits"], angle["Circuito: portas"], angle["Circuito: CNOTs"]) == (2, 18, 4)
+    assert "\\multicolumn{3}{c}{Bloco de codificação}" in tex
+    assert "\\multicolumn{4}{c}{Circuito completo}" in tex
+
+
+def test_tab_custo_mede_as_portas_de_um_resumo_antigo(resumo_falso):
+    """Sem as colunas de portas no CSV, o circuito é medido de novo, sem treino."""
+    antigo = resumo_falso.drop(
+        columns=["gates_total", "gates_1q_encoding", "gates_2q_encoding", "gates_total_encoding"]
+    )
+    novo, _ = tab_custo(resumo_falso)
+    medido, _ = tab_custo(antigo)
+
+    pd.testing.assert_frame_equal(novo, medido)
+
+
+def test_tab_custo_separa_avaliacoes_de_shots(resumo_falso):
+    """2p só como comparação; o custo é (2p + 1)|B| avaliações e (2p + 1)|B|S shots."""
+    tabela, tex = tab_custo(resumo_falso)
+    angle = tabela.iloc[0]
+
+    assert angle["Desloc. ($2p$)"] == 24
+    assert angle["Aval./amostra"] == 25
+    assert angle["Aval./passo"] == 500
+    assert angle["\\textit{Shots}/passo"] == "500\\,000"
+    assert "$(2p + 1)|B|S$" in tex
+
+
+def test_tab_custo_recalcula_contagens_de_um_resumo_antigo(resumo_falso):
+    """Um resumo.csv anterior à correção (2p + 1) não tem as colunas novas."""
+    antigo = resumo_falso.drop(
+        columns=["aval_derivadas_amostra", "aval_gradiente_amostra", "n_aval_passo", "n_shots_passo"]
+    )
+    novo, _ = tab_custo(resumo_falso)
+    recalculado, _ = tab_custo(antigo)
+
+    pd.testing.assert_frame_equal(novo, recalculado)
 
 
 def test_tab_ablacao_tem_uma_coluna_por_conjunto():

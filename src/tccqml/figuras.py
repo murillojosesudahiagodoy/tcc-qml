@@ -125,11 +125,17 @@ def fig_datasets(destino: Path) -> Path:
 
 
 def fig_curvas_treinamento(comparacao: pd.DataFrame, destino: Path) -> Path:
-    """Custo e acurácia de teste por época, uma coluna por dataset."""
+    """Custo, acurácia de treino e de validação por época, uma coluna por dataset.
+
+    O teste não aparece aqui de propósito: ele só é medido uma vez, no modelo
+    da época escolhida pela validação. Uma curva de teste por época convidaria
+    a escolher a parada olhando o teste.
+    """
     datasets = _presentes(comparacao["dataset"], ORDEM_DATASETS)
     encodings = _presentes(comparacao["encoding"], ORDEM_ENCODINGS)
+    series = ("custo", "acc_treino", "acc_val")
     fig, eixos = plt.subplots(
-        2, len(datasets), figsize=(6.5, 4.2), sharex=True, sharey="row", squeeze=False
+        len(series), len(datasets), figsize=(6.5, 5.6), sharex=True, sharey="row", squeeze=False
     )
     for coluna, dataset in enumerate(datasets):
         for encoding in encodings:
@@ -137,9 +143,9 @@ def fig_curvas_treinamento(comparacao: pd.DataFrame, destino: Path) -> Path:
                 (comparacao["dataset"] == dataset) & (comparacao["encoding"] == encoding)
             ]
             # Média entre sementes: a curva de uma semente só é ruído.
-            media = fatia.groupby("epoca")[["custo", "acc_teste"]].mean()
+            media = fatia.groupby("epoca")[list(series)].mean()
             estilo = _estilo(encoding)
-            for linha, coluna_dado in enumerate(("custo", "acc_teste")):
+            for linha, coluna_dado in enumerate(series):
                 eixos[linha][coluna].plot(
                     media.index,
                     media[coluna_dado],
@@ -149,9 +155,10 @@ def fig_curvas_treinamento(comparacao: pd.DataFrame, destino: Path) -> Path:
                     markersize=4,
                     **estilo,
                 )
-        eixos[1][coluna].set_xlabel(f"{NOMES.get(dataset, dataset)}\népoca")
-    eixos[0][0].set_ylabel("custo quadrático")
-    eixos[1][0].set_ylabel("acurácia de teste")
+        eixos[-1][coluna].set_xlabel(f"{NOMES.get(dataset, dataset)}\népoca")
+    eixos[0][0].set_ylabel("custo de treino")
+    eixos[1][0].set_ylabel("acurácia de treino")
+    eixos[2][0].set_ylabel("acurácia de validação")
     # Acima da grade, numa linha: dentro de um painel ela cobria as curvas.
     alcas, rotulos = eixos[0][0].get_legend_handles_labels()
     fig.legend(alcas, rotulos, loc="outside upper center", ncol=len(rotulos), frameon=False)

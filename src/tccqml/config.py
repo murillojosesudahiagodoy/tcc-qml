@@ -24,7 +24,10 @@ class Protocolo:
     # --- dados (Seção 2.5.7) ---
     n_samples: int = 300
     noise: float = 0.15
-    test_size: float = 0.3
+    # Frações do conjunto TOTAL: 60/20/20 -> 180/60/60 com N = 300. A validação
+    # escolhe a época de parada; o teste só é tocado uma vez, no fim.
+    val_size: float = 0.2
+    test_size: float = 0.2
     feature_range: tuple[float, float] = (0.0, np.pi)
     circles_factor: float = 0.4
 
@@ -41,7 +44,7 @@ class Protocolo:
     seed: int = 42
     sementes: tuple[int, ...] = (42, 43, 44, 45, 46)
 
-    # --- contabilidade de custo em hardware (Eq. 2.48) ---
+    # --- contabilidade de custo em hardware: S nas contagens (2p + 1)|B|S ---
     shots: int = 1000
 
     # --- grade de experimentos e varredura ---
@@ -69,10 +72,11 @@ class Protocolo:
 
         `treinar()` divide as amostras de treino em `n // batch_size` lotes com
         `np.array_split`, então o lote real é ligeiramente maior que
-        `batch_size`. Com N = 300 e test_size = 0.3 são 210 amostras em 10
-        lotes de 21 — é o |B| = 21 que aparece na Eq. 2.48.
+        `batch_size`. Com N = 300, val_size = 0.2 e test_size = 0.2 são 180
+        amostras em 9 lotes de 20 — é o |B| = 20 que entra nas
+        contagens (2p + 1)|B| e (2p + 1)|B|S.
         """
-        n_treino = round(self.n_samples * (1 - self.test_size))
+        n_treino = round(self.n_samples * (1 - self.val_size - self.test_size))
         n_lotes = max(1, n_treino // self.batch_size)
         return int(np.ceil(n_treino / n_lotes))
 

@@ -1,5 +1,6 @@
 """Treinamento do classificador variacional (Etapa 8)."""
 
+import copy
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -14,13 +15,20 @@ from tccqml.model import Classificador, pesos_iniciais, prever, saida_continua
 
 @dataclass
 class Resultado:
-    """Saída de um treino: parâmetros finais e histórico por época."""
+    """Saída de um treino: parâmetros da época escolhida e histórico por época.
+
+    `weights`, `alpha`, `bias` e as três acurácias são as do modelo da época
+    `epoca_escolhida` (a de maior acurácia de validação), não as da última
+    época. `acc_teste` é a única medida feita no conjunto de teste.
+    """
 
     weights: object
     bias: object
     historico: pd.DataFrame
     acc_treino: float
     acc_teste: float
+    acc_val: float = float("nan")
+    epoca_escolhida: int = 0
     alpha: object = None
     meta: dict = field(default_factory=dict)
 
@@ -43,6 +51,15 @@ def treinar(
     (Eqs. 2.47 e 2.48), porque é o custo que o mesmo treino teria em hardware
     real. O passo de atualização é clássico, e é isso que torna o modelo
     híbrido.
+
+    A cada época o histórico registra custo e acurácia de treino e a acurácia
+    de VALIDAÇÃO — nunca a de teste. A validação escolhe a época de parada: os
+    parâmetros da época com maior `acc_val` são guardados (no empate fica a
+    mais antiga, que é o modelo mais simples de alcançar) e restaurados no
+    fim. Só então o teste é usado, UMA única vez, com esses parâmetros. Se a
+    acurácia de teste fosse olhada época a época, escolher a melhor curva seria
+    ajustar ao teste, e o número reportado deixaria de ser uma estimativa
+    honesta da generalização.
     """
     weights, alpha, bias = pesos_iniciais(clf, seed=seed)
     opt = qml.AdamOptimizer(stepsize=lr)
@@ -62,6 +79,9 @@ def treinar(
         return custo(w, None, b, Xb, yb)
 
     linhas = []
+    melhor_acc_val = -np.inf
+    melhor_epoca = 0
+    melhores = None
     for epoca in range(1, epocas + 1):
         for idx in np.array_split(rng.permutation(n), max(1, n // batch_size)):
             if alpha is None:
@@ -73,22 +93,41 @@ def treinar(
 
         custo_epoca = float(custo(weights, alpha, bias, X_tr, y_tr))
         acc_tr = accuracy(ds.y_train, prever(clf, weights, alpha, bias, ds.X_train))
-        acc_te = accuracy(ds.y_test, prever(clf, weights, alpha, bias, ds.X_test))
+        acc_va = accuracy(ds.y_val, prever(clf, weights, alpha, bias, ds.X_val))
         linhas.append(
-            {"epoca": epoca, "custo": custo_epoca, "acc_treino": acc_tr, "acc_teste": acc_te}
+            {"epoca": epoca, "custo": custo_epoca, "acc_treino": acc_tr, "acc_val": acc_va}
         )
 
+        # Estritamente maior: no empate fica a época mais antiga.
+        if acc_va > melhor_acc_val:
+            melhor_acc_val = acc_va
+            melhor_epoca = epoca
+            melhores = copy.deepcopy((weights, alpha, bias))
+
         if verbose and (epoca % 5 == 0 or epoca == 1):
-            print(f"época {epoca:3d}  custo={custo_epoca:.4f}  treino={acc_tr:.3f}  teste={acc_te:.3f}")
+            print(f"época {epoca:3d}  custo={custo_epoca:.4f}  treino={acc_tr:.3f}  val={acc_va:.3f}")
 
     hist = pd.DataFrame(linhas)
+    weights, alpha, bias = melhores
+    escolhida = hist[hist["epoca"] == melhor_epoca].iloc[0]
+    # A única vez em que o conjunto de teste é tocado.
+    acc_teste = accuracy(ds.y_test, prever(clf, weights, alpha, bias, ds.X_test))
+
+    if verbose:
+        print(
+            f"época escolhida pela validação: {melhor_epoca}  "
+            f"(treino={escolhida['acc_treino']:.3f}  val={escolhida['acc_val']:.3f})"
+        )
+
     return Resultado(
         weights=weights,
         alpha=alpha,
         bias=bias,
         historico=hist,
-        acc_treino=float(hist["acc_treino"].iloc[-1]),
-        acc_teste=float(hist["acc_teste"].iloc[-1]),
+        acc_treino=float(escolhida["acc_treino"]),
+        acc_teste=float(acc_teste),
+        acc_val=float(escolhida["acc_val"]),
+        epoca_escolhida=int(melhor_epoca),
         meta={
             "encoding": clf.encoding,
             "dataset": ds.name,

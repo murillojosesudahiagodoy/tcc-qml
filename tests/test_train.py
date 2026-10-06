@@ -53,7 +53,7 @@ def test_historico_e_metadados_completos():
 
     r = treinar(clf, ds, epocas=3, batch_size=20, seed=42, verbose=False)
 
-    assert list(r.historico.columns) == ["epoca", "custo", "acc_treino", "acc_teste"]
+    assert list(r.historico.columns) == ["epoca", "custo", "acc_treino", "acc_val"]
     assert len(r.historico) == 3
     assert r.meta["encoding"] == "angle"
     assert r.meta["dataset"] == "moons"
@@ -70,3 +70,42 @@ def test_meta_separa_p_do_circuito_dos_parametros_do_modelo():
 
     assert r.meta["n_params_circuito"] + 1 == r.meta["n_params"]
     assert r.meta["n_params_encoding"] == 0
+
+
+def test_historico_nao_tem_coluna_de_teste():
+    """O teste é usado uma vez, no fim — nunca época a época."""
+    ds = load_dataset("moons", n_samples=60, seed=42)
+    clf = model.build("angle", n_features=2, n_layers=2)
+
+    r = treinar(clf, ds, epocas=3, batch_size=20, seed=42, verbose=False)
+
+    assert not [c for c in r.historico.columns if "test" in c]
+
+
+def test_epoca_escolhida_e_a_de_maior_acc_val():
+    """A validação escolhe a época; no empate fica a mais antiga."""
+    ds = load_dataset("moons", n_samples=80, seed=42)
+    clf = model.build("angle", n_features=2, n_layers=2)
+
+    r = treinar(clf, ds, epocas=8, batch_size=20, lr=0.2, seed=42, verbose=False)
+    hist = r.historico
+    melhor = hist.loc[hist["acc_val"].idxmax()]  # idxmax devolve o primeiro máximo
+
+    assert r.epoca_escolhida == int(melhor["epoca"])
+    assert r.acc_val == pytest.approx(hist["acc_val"].max())
+    assert r.acc_treino == pytest.approx(melhor["acc_treino"])
+
+
+def test_parametros_devolvidos_sao_os_da_epoca_escolhida():
+    """acc_treino, acc_val e acc_teste saem todos do mesmo modelo restaurado."""
+    ds = load_dataset("moons", n_samples=80, seed=42)
+    clf = model.build("angle", n_features=2, n_layers=2)
+
+    r = treinar(clf, ds, epocas=8, batch_size=20, lr=0.2, seed=42, verbose=False)
+
+    def acc(X, y):
+        return accuracy(y, model.prever(clf, r.weights, r.alpha, r.bias, X))
+
+    assert acc(ds.X_train, ds.y_train) == pytest.approx(r.acc_treino)
+    assert acc(ds.X_val, ds.y_val) == pytest.approx(r.acc_val)
+    assert acc(ds.X_test, ds.y_test) == pytest.approx(r.acc_teste)

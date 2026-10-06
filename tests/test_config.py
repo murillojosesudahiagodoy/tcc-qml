@@ -18,10 +18,16 @@ def test_n_samples_bate_com_a_secao_2_5_7():
 
 def test_load_dataset_usa_o_protocolo_por_padrao():
     ds = load_dataset("moons")
-    n_treino = round(PADRAO.n_samples * (1 - PADRAO.test_size))
+    n_treino = round(PADRAO.n_samples * (1 - PADRAO.val_size - PADRAO.test_size))
 
     assert len(ds.X_train) == n_treino
-    assert len(ds.X_train) + len(ds.X_test) == PADRAO.n_samples
+    assert len(ds.X_train) + len(ds.X_val) + len(ds.X_test) == PADRAO.n_samples
+
+
+def test_split_60_20_20_no_protocolo():
+    """Validação e teste são frações do conjunto TOTAL, não do restante."""
+    assert PADRAO.val_size == 0.2
+    assert PADRAO.test_size == 0.2
 
 
 def test_normalizacao_padrao_e_0_pi():
@@ -57,6 +63,12 @@ def test_protocolo_e_imutavel():
 
 
 def test_batch_efetivo_deriva_do_protocolo():
-    p = Protocolo(n_samples=300, test_size=0.3, batch_size=20)
+    p = Protocolo(n_samples=300, val_size=0.2, test_size=0.2, batch_size=20)
 
-    assert p.batch_efetivo == 21
+    assert p.batch_efetivo == 20
+    assert PADRAO.batch_efetivo == 20
+
+
+def test_batch_efetivo_desconta_validacao_e_teste():
+    """210 amostras de treino (sem validação) voltam a dar os lotes de 21."""
+    assert Protocolo(n_samples=300, val_size=0.0, test_size=0.3).batch_efetivo == 21

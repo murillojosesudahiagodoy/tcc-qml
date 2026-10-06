@@ -15,8 +15,10 @@ Duas decisões que mudam os números e por isso ficam explícitas:
 
 2. **As métricas de gradiente são analíticas, não medidas.** O treino roda em
    `default.qubit` com retropropagação, que não paga o custo do
-   parameter-shift (Seção 2.3.5.1). As Eqs. 2.47 e 2.48 descrevem o que o
-   MESMO treino custaria em hardware real, e é isso que o TCC reporta.
+   parameter-shift (Seção 2.3.5.1). As contagens descrevem o que o MESMO
+   treino custaria em hardware real, e é isso que o TCC reporta: 2p + 1
+   avaliações por amostra (as 2p deslocadas da Eq. 2.47 mais a do resíduo
+   f(x) + b - y), (2p + 1)|B| avaliações e (2p + 1)|B|S shots por passo.
 """
 
 from collections import Counter
@@ -107,22 +109,46 @@ def _tape_do_bloco_de_dados(clf: Classificador, x_exemplo) -> object:
     return qml.workflow.construct_tape(apenas_codificacao, level="device")(x_exemplo)
 
 
-def avaliacoes_por_gradiente(n_params_circuito: int) -> int:
-    """Eq. 2.47: parameter-shift custa 2 avaliações por parâmetro do circuito.
+def aval_derivadas_amostra(n_params_circuito: int) -> int:
+    """Eq. 2.47: só as 2p avaliações DESLOCADAS do parameter-shift, por amostra.
 
-    Analítica. O viés clássico não entra: sua derivada não executa o circuito.
+    Analítica. Dá as derivadas parciais de f(x) e mais nada; fica nos CSVs
+    para comparação com o texto. O gradiente do custo também precisa do
+    resíduo, que é outra avaliação: ver `aval_gradiente_amostra`. O viés
+    clássico não entra: sua derivada não executa o circuito.
     """
     return 2 * int(n_params_circuito)
 
 
-def n_execucoes_hardware(n_params_circuito: int, batch_size: int, shots: int) -> int:
-    """Eq. 2.48: N_circ = 2 p |B| shots, execuções por passo do otimizador.
+def aval_gradiente_amostra(n_params_circuito: int) -> int:
+    """2p + 1 avaliações por amostra para o gradiente do custo quadrático.
 
-    Analítica. Na configuração de referência (p = 12, |B| = 21, shots = 1000)
-    dá 504 000 execuções para UM passo — o número que motiva a discussão de
-    viabilidade do Capítulo 2.
+    O gradiente de (f(x) + b - y)^2 é 2 (f(x) + b - y) df/dtheta: as 2p
+    avaliações deslocadas dão df/dtheta, mas o resíduo exige f(x) no ponto
+    sem deslocamento — uma avaliação a mais por amostra. A Eq. 2.48 do texto
+    conta só as 2p; o texto precisa acompanhar esta contagem.
     """
-    return 2 * int(n_params_circuito) * int(batch_size) * int(shots)
+    return aval_derivadas_amostra(n_params_circuito) + 1
+
+
+def n_aval_passo(n_params_circuito: int, batch_size: int) -> int:
+    """Avaliações distintas do circuito por passo do otimizador: (2p + 1)|B|.
+
+    É a contagem de circuitos diferentes a submeter, sem os shots: separar as
+    duas coisas deixa claro quanto do custo vem do gradiente e quanto da
+    estimativa estatística de cada valor esperado.
+    """
+    return aval_gradiente_amostra(n_params_circuito) * int(batch_size)
+
+
+def n_shots_passo(n_params_circuito: int, batch_size: int, shots: int) -> int:
+    """Shots por passo do otimizador: (2p + 1)|B|S, com S = `Protocolo.shots`.
+
+    Analítica. Com p = 12, |B| = 20 (`PADRAO.batch_efetivo`) e S = 1000 dá
+    500 avaliações x 1000 shots = 500 000 execuções para UM passo. Corrige os
+    2p|B|S da Eq. 2.48, que esquecem a avaliação do resíduo.
+    """
+    return n_aval_passo(n_params_circuito, batch_size) * int(shots)
 
 
 def stats(
@@ -162,12 +188,15 @@ def stats(
         "gates_total": total["gates_total"],
         "gates_1q_encoding": codificacao["gates_1q"],
         "gates_2q_encoding": codificacao["gates_2q"],
+        "gates_total_encoding": codificacao["gates_total"],
         "n_params_ansatz": clf.n_params_ansatz,
         "n_params_encoding": clf.n_params_encoding,
         "n_params_circuito": p,
         "n_params_modelo": clf.n_params,
-        "avaliacoes_por_gradiente": avaliacoes_por_gradiente(p),
-        "n_execucoes_hardware": n_execucoes_hardware(p, batch_size, shots),
+        "aval_derivadas_amostra": aval_derivadas_amostra(p),
+        "aval_gradiente_amostra": aval_gradiente_amostra(p),
+        "n_aval_passo": n_aval_passo(p, batch_size),
+        "n_shots_passo": n_shots_passo(p, batch_size, shots),
     }
 
 
@@ -176,7 +205,8 @@ def stats_ansatz(n_qubits: int, n_layers: int, ansatz: str = "strongly_entanglin
 
     Separado de `stats()` porque a Tabela 2 compara ansätze, sem codificação:
     para n qubits e L camadas o StronglyEntanglingLayers tem 3Ln parâmetros,
-    3Ln portas de um qubit, Ln de dois qubits e 6Ln avaliações por gradiente.
+    3Ln portas de um qubit, Ln de dois qubits e 6Ln avaliações deslocadas
+    (as 2p da Eq. 2.47; com a do resíduo, 6Ln + 1 por amostra).
     """
     from tccqml.ansatz import get_ansatz
 
@@ -193,7 +223,8 @@ def stats_ansatz(n_qubits: int, n_layers: int, ansatz: str = "strongly_entanglin
     contagem = contar_tape(qml.workflow.construct_tape(apenas_ansatz, level="device")(pesos))
     p = int(np.prod(forma))
     contagem["n_params_circuito"] = p
-    contagem["avaliacoes_por_gradiente"] = avaliacoes_por_gradiente(p)
+    contagem["aval_derivadas_amostra"] = aval_derivadas_amostra(p)
+    contagem["aval_gradiente_amostra"] = aval_gradiente_amostra(p)
     return contagem
 
 
@@ -206,7 +237,9 @@ def formatar(s: dict) -> str:
         f"  portas de 1 qubit .... {s['gates_1q']}",
         f"  portas de 2 qubits ... {s['gates_2q']}",
         f"  parâmetros (p) ....... {s['n_params_circuito']}",
-        f"  aval./gradiente ...... {s['avaliacoes_por_gradiente']}  (Eq. 2.47)",
-        f"  exec. em hardware .... {s['n_execucoes_hardware']:,}  por passo (Eq. 2.48)",
+        f"  aval. deslocadas ..... {s['aval_derivadas_amostra']}  por amostra (2p, Eq. 2.47)",
+        f"  aval. p/ gradiente ... {s['aval_gradiente_amostra']}  por amostra (2p + 1)",
+        f"  aval. por passo ...... {s['n_aval_passo']:,}  ((2p + 1)|B|)",
+        f"  shots por passo ...... {s['n_shots_passo']:,}  ((2p + 1)|B|S)",
     ]
     return "\n".join(linhas)

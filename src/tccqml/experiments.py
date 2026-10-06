@@ -26,17 +26,25 @@ from tccqml.config import PADRAO, Protocolo
 from tccqml.data import load_dataset
 from tccqml.train import treinar
 
+# Recursos do circuito completo e, separadamente, do bloco de codificação
+# (Seção 3.8): qubits, profundidade, portas totais e portas de dois qubits.
 COLUNAS_CUSTO = (
     "n_qubits",
     "depth",
-    "depth_encoding",
     "gates_1q",
     "gates_2q",
+    "gates_total",
+    "depth_encoding",
+    "gates_1q_encoding",
+    "gates_2q_encoding",
+    "gates_total_encoding",
     "n_params_ansatz",
     "n_params_encoding",
     "n_params_circuito",
-    "avaliacoes_por_gradiente",
-    "n_execucoes_hardware",
+    "aval_derivadas_amostra",
+    "aval_gradiente_amostra",
+    "n_aval_passo",
+    "n_shots_passo",
 )
 
 
@@ -64,6 +72,7 @@ def rodar_um(
         dataset,
         n_samples=protocolo.n_samples,
         noise=protocolo.noise,
+        val_size=protocolo.val_size,
         test_size=protocolo.test_size,
         seed=seed,
         feature_range=feature_range or protocolo.feature_range,
@@ -112,8 +121,12 @@ def rodar_um(
         # Só faz diferença nas codificações que aplicam o ansatz depois do
         # bloco de dados; no re-uploading quem dita as camadas é `L_reup`.
         "n_layers": protocolo.n_layers if encoding != "reuploading" else np.nan,
+        # As três acurácias são do modelo da época escolhida pela validação;
+        # `acc_teste` é a única medida feita no teste.
         "acc_treino": r.acc_treino,
+        "acc_val": r.acc_val,
         "acc_teste": r.acc_teste,
+        "epoca_escolhida": r.epoca_escolhida,
         "custo_final": float(hist["custo"].iloc[-1]),
         "epoca_90pct": epoca_para_90pct(hist),
         "segundos": segundos,
@@ -178,7 +191,8 @@ def rodar_grade(
                     restante = decorrido / i * (total - i)
                     print(
                         f"[{i:3d}/{total}] {encoding:12s} {dataset:8s} seed={seed} "
-                        f"teste={resumo['acc_teste']:.3f}  "
+                        f"val={resumo['acc_val']:.3f} teste={resumo['acc_teste']:.3f} "
+                        f"(época {resumo['epoca_escolhida']})  "
                         f"({resumo['segundos']:.1f}s, faltam ~{restante / 60:.1f} min)"
                     )
 
@@ -207,7 +221,9 @@ def resumir(por_treino: pd.DataFrame) -> pd.DataFrame:
         # `count` deixa o número de sementes legível no CSV, para a legenda da
         # tab_acuracia não precisar repetir um número escrito à mão.
         "acc_teste": ["mean", "std", "count"],
+        "acc_val": ["mean", "std", "count"],
         "acc_treino": ["mean", "std"],
+        "epoca_escolhida": ["mean", "std"],
         "custo_final": ["mean", "std"],
         "epoca_90pct": ["mean", "std"],
         "segundos": ["mean"],
