@@ -3,6 +3,8 @@ name = "tccqml"
 version = "0.1.0"
 description = "TCC - Quantum Machine Learning"
 requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
 dependencies = [
     "pennylane>=0.45",
     "numpy>=1.26",
@@ -23,7 +25,8 @@ notebooks = ["jupyterlab>=4.2", "ipykernel>=6.29", "ipywidgets>=8.1", "pymupdf>=
 tccqml = "tccqml.cli:main"
 
 [build-system]
-requires = ["setuptools>=68"]
+# >= 77: primeira versão que aceita `license` como expressão SPDX e `license-files`.
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
