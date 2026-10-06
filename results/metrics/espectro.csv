@@ -1,0 +1,5 @@
+encoding,L_reup,omega_max_previsto,omega_max_x1,omega_max_x2,n_termos_previsto,n_termos_medido,n_termos_cruzados,n_params_circuito,dentro_do_limite,atinge_limite
+angle,,1,1,1,9,6,4,12,True,True
+reuploading,1.0,1,0,1,9,2,0,6,True,False
+reuploading,2.0,2,1,2,25,10,8,12,True,False
+reuploading,3.0,3,2,3,49,35,24,18,True,False

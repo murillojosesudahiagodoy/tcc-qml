@@ -224,9 +224,11 @@ src/tccqml/
   cli.py            a linha de comando
 tests/              177 testes
 notebooks/          tcc_qml.ipynb: o fluxo inteiro da CLI, de forma didática
-results/metrics/    CSVs (não versionados)
-results/tables/     .tex para o Overleaf
+results/metrics/    CSVs de cada experimento
+results/tables/     .tex (e .csv) para o Overleaf
 results/figures/    .pdf para o Overleaf
+results/weights/    pesos finais da grade (.npz), de onde saem as fronteiras
+                    (as quatro pastas são versionadas; results/notebook/, não)
 docs/               reservado para documentação (o conteúdo atual é local,
                     inclusive o texto do TCC em .pdf)
 ```

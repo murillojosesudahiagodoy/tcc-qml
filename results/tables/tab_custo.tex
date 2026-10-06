@@ -1,0 +1,23 @@
+\begin{table}[htb]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{2pt}
+\caption{Custo de circuito por codificação, com $n = 2$ atributos e o \textit{ansatz} congelado. Contagens feitas sobre o circuito já decomposto nas portas básicas.}
+\label{tab:custo}
+\begin{tabular}{lcccccccccccc}
+\hline
+ &  & \multicolumn{3}{c}{Bloco de codificação} & \multicolumn{4}{c}{Circuito completo} & \multicolumn{4}{c}{Custo por passo} \\
+\cline{3-5} \cline{6-9} \cline{10-13}
+Codificação & $p$ & Prof. & Portas & CNOTs & Qubits & Prof. & Portas & CNOTs & \shortstack{Desloc.\\($2p$)} & \shortstack{Aval./\\amostra} & \shortstack{Aval./\\passo} & \shortstack{\textit{Shots}/\\passo} \\
+\hline
+\textit{Angle} & 12 & 1 & 2 & 0 & 2 & 11 & 18 & 4 & 24 & 25 & 500 & 500\,000 \\
+\textit{Amplitude} & 6 & 2 & 2 & 0 & 1 & 8 & 8 & 0 & 12 & 13 & 260 & 260\,000 \\
+\textit{Re-uploading} & 18 & 3 & 6 & 0 & 2 & 18 & 30 & 6 & 36 & 37 & 740 & 740\,000 \\
+\textit{Feature map} ZZ & 12 & 10 & 14 & 4 & 2 & 20 & 30 & 8 & 24 & 25 & 500 & 500\,000 \\
+\hline
+\end{tabular}
+\\[2pt]
+{\footnotesize Portas: total de portas básicas (rotações de um qubit e CNOTs); CNOTs: portas de dois qubits. O bloco de codificação usa os mesmos qubits do circuito completo. Custo por passo: o que um passo do otimizador custaria em \textit{hardware}. Contagens de gradiente analíticas: o treino usa retropropagação sobre o simulador, não \textit{parameter-shift}. \textit{Desloc.}: só as $2p$ avaliações deslocadas que dão as derivadas (Eq.~2.47). \textit{Aval./amostra}: $2p + 1$, com a avaliação sem deslocamento que dá o resíduo $f(x) + b - y$ do custo quadrático. \textit{Aval./passo}: $(2p + 1)|B|$. \textit{Shots/passo}: $(2p + 1)|B|S$, com $S$ \textit{shots} por avaliação.}
+\\[2pt]
+{\footnotesize Fonte: Elaborada pelo autor.}
+\end{table}

@@ -1,0 +1,18 @@
+\begin{table}[htb]
+\centering
+\caption{Verificações sobre os dados: acurácia de teste da regressão logística nas nove funções $\{1, \cos x_j, \sin x_j\}$ e seus produtos, e da regra $g(x) = (\sin x_1 + \sin x_2)/2 > t$ no \textit{circles} (média $\pm$ desvio padrão sobre cinco sementes).}
+\label{tab:verificacoes}
+\begin{tabular}{lccc}
+\hline
+Verificação & XOR & \textit{Moons} & \textit{Circles} \\
+\hline
+Controle linear (9 funções) & 0,873 $\pm$ 0,045 & 0,850 $\pm$ 0,039 & 0,963 $\pm$ 0,022 \\
+$g > t$, sem ruído & -- & -- & 1,000 $\pm$ 0,000 \\
+$g > t$, ruído 0,15 & -- & -- & 0,967 $\pm$ 0,020 \\
+\hline
+\end{tabular}
+\\[2pt]
+{\footnotesize Coordenadas já normalizadas para $[0, \pi]$, com as mesmas partições e sementes da comparação principal. A regressão logística tem hiperparâmetros fixados antes de rodar ($C = 1,0$); o limiar $t$ e o sentido da desigualdade são escolhidos no treino. Um separador nesse espaço de funções não prova que o circuito quântico realize ou aprenda os mesmos coeficientes.}
+\\[2pt]
+{\footnotesize Fonte: Elaborada pelo autor.}
+\end{table}

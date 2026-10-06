@@ -1,0 +1,5 @@
+Codificação,$p$,Codif.: prof.,Codif.: portas,Codif.: CNOTs,Circuito: qubits,Circuito: prof.,Circuito: portas,Circuito: CNOTs,Desloc. ($2p$),Aval./amostra,Aval./passo,\textit{Shots}/passo
+\textit{Angle},12,1,2,0,2,11,18,4,24,25,500,"500\,000"
+\textit{Amplitude},6,2,2,0,1,8,8,0,12,13,260,"260\,000"
+\textit{Re-uploading},18,3,6,0,2,18,30,6,36,37,740,"740\,000"
+\textit{Feature map} ZZ,12,10,14,4,2,20,30,8,24,25,500,"500\,000"

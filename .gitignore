@@ -14,11 +14,17 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 
-# Resultados pesados (versionar so o codigo). Nao ha pasta de dados: os tres
-# datasets sao sinteticos e nascem de uma semente, em memoria.
-results/**
-!results/**/
-!results/**/.gitkeep
+# Resultados: versionam-se as quatro pastas oficiais (metrics, tables, figures,
+# weights), para que tabelas e figuras do texto possam ser conferidas sem rodar
+# nada. Nao ha pasta de dados: os tres datasets sao sinteticos e nascem de uma
+# semente, em memoria.
+results/*
+!results/metrics/
+!results/tables/
+!results/figures/
+!results/weights/
+# Sobras dos notebooks antigos, que nenhum subcomando grava.
+results/figures/notebook/
 # Saídas do treino interativo do notebook: nunca são resultado oficial.
 results/notebook/
 
