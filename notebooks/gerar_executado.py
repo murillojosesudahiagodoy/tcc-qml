@@ -68,6 +68,16 @@ def caminhos_pessoais(nb) -> list[str]:
     return achados
 
 
+def sem_repr_redundante(nb) -> None:
+    # O text/plain ao lado de uma tabela ou figura é só o repr do objeto
+    # (`<... at 0x...>`), que muda a cada execução e sujaria o diff.
+    for celula in nb.cells:
+        for saida in celula.get("outputs", []):
+            dados = saida.get("data", {})
+            if "text/plain" in dados and ("text/html" in dados or "image/png" in dados):
+                del dados["text/plain"]
+
+
 def main() -> None:
     nb = nbformat.read(ORIGEM, as_version=4)
     fixar_parametros(nb)
@@ -78,6 +88,7 @@ def main() -> None:
         record_timing=False,
         resources={"metadata": {"path": str(PASTA)}},
     ).execute()
+    sem_repr_redundante(nb)
 
     nb.cells.insert(0, nbformat.v4.new_markdown_cell(AVISO, id="executado"))
     # O nbstripout respeita esta chave e não apaga as saídas deste arquivo.
