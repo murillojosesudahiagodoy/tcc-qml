@@ -82,6 +82,20 @@ o comando equivalente. Por isso os números são os mesmos do terminal. As figur
 os PDFs gravados por `figuras`. O notebook só desenha o que a CLI não gera: o circuito, o
 estado ψ(x), a comparação bruto × normalizado e os gráficos do treino interativo.
 
+Há duas versões:
+
+- [`notebooks/tcc_qml.ipynb`](notebooks/tcc_qml.ipynb) é a **interativa**, para rodar e
+  mexer. É salva sem saídas.
+- [`notebooks/tcc_qml_executado.ipynb`](notebooks/tcc_qml_executado.ipynb) é a **de
+  leitura**: a mesma sequência já executada, com todas as tabelas e figuras, que o GitHub
+  exibe direto, sem instalar nada. Usa as células alternativas no lugar dos painéis, porque
+  widgets não aparecem no GitHub. Não se edita à mão: é gerada a partir da interativa por
+  `python notebooks/gerar_executado.py` (cerca de 40 s, com `RODAR = False`,
+  `RODAR_TESTES = False` e `USAR_WIDGETS = False`), que deve ser rodado de novo sempre que a
+  interativa ou os resultados mudarem. O script falha se alguma saída contiver um caminho
+  absoluto da máquina, e o arquivo é excluído de filtros de limpeza como o nbstripout
+  (`.gitattributes` e `"keep_output": true` nos metadados).
+
 | Seção | O que tem |
 |---|---|
 | 0. Setup | parâmetros, versões do Python e do PennyLane, `pytest` e `listar` |
@@ -107,14 +121,16 @@ A célula de parâmetros, no topo, controla o resto:
 | Parâmetro | Padrão | Efeito |
 |---|---|---|
 | `OUT_DIR` | `"results"` | o `--out` dos subcomandos e de onde se leem os resultados |
-| `RODAR` | `True` | `False` não executa nenhum experimento, só carrega os arquivos |
-| `RODAR_TESTES` | `True` | roda o `pytest` no setup (~1 min) |
+| `RODAR` | `False` | `True` roda os experimentos cujos arquivos faltarem; `False` só carrega os arquivos |
+| `RODAR_TESTES` | `False` | `True` roda o `pytest` no setup (~1 min) |
 | `USAR_WIDGETS` | `True` | `False` usa as células alternativas sem ipywidgets |
 | `OUT_TREINO` | `"results/notebook"` | saída do treino interativo, separada da oficial |
 
-Cada experimento só roda se faltar algum arquivo que ele grava. Com os resultados já em
-`results/`, o notebook inteiro roda em cerca de um minuto. Do zero, com `RODAR = True`,
-leva cerca de 50 minutos.
+Cada experimento só roda se faltar algum arquivo que ele grava e se `RODAR = True`. Como os
+resultados estão versionados em `results/`, o padrão só os lê, e o notebook inteiro roda em
+cerca de um minuto. Do zero, com `RODAR = True`, leva cerca de 50 minutos. O treino
+interativo da seção 3 não depende de `RODAR`: treinar uma combinação é uma ação explícita
+(o botão, ou a célula alternativa) e leva segundos.
 
 ## Onde cada número do TCC nasce
 
@@ -222,8 +238,10 @@ src/tccqml/
   tabelas.py        gera .csv e .tex
   figuras.py        gera .pdf vetorial
   cli.py            a linha de comando
-tests/              177 testes
-notebooks/          tcc_qml.ipynb: o fluxo inteiro da CLI, de forma didática
+tests/              179 testes
+notebooks/          tcc_qml.ipynb: o fluxo inteiro da CLI, de forma didática;
+                    tcc_qml_executado.ipynb: a cópia executada, para leitura
+                    (gerada por gerar_executado.py)
 results/metrics/    CSVs de cada experimento
 results/tables/     .tex (e .csv) para o Overleaf
 results/figures/    .pdf para o Overleaf

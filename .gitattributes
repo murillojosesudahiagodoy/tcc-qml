@@ -1,0 +1,5 @@
+# tcc_qml_executado.ipynb guarda as saídas de propósito (é a versão de leitura, gerada por
+# notebooks/gerar_executado.py): nenhum filtro de limpeza, como o nbstripout, deve passar
+# por ele. O próprio arquivo também leva `"keep_output": true` nos metadados, que o
+# nbstripout respeita mesmo quando instalado em .git/info/attributes.
+notebooks/tcc_qml_executado.ipynb -filter
