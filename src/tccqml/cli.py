@@ -31,6 +31,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import pandas as pd
+
 from tccqml import model
 from tccqml.ansatz import ANSATZE
 from tccqml.circuit_stats import formatar, stats
@@ -59,7 +61,11 @@ def _parser() -> argparse.ArgumentParser:
     t.add_argument("--lr", type=float, default=PADRAO.lr)
     t.add_argument("--seed", type=int, default=PADRAO.seed)
     t.add_argument("--n-samples", type=int, default=PADRAO.n_samples, dest="n_samples")
-    t.add_argument("--salvar", action="store_true", help="grava o histórico em CSV")
+    t.add_argument(
+        "--salvar",
+        action="store_true",
+        help="grava o histórico e o resumo em CSV e os pesos da época escolhida em .npz",
+    )
 
     c = sub.add_parser("comparar", help="roda a grade completa: 4 codificações x 3 datasets x 5 sementes")
     c.add_argument("--sementes", type=int, nargs="+", default=list(PADRAO.sementes))
@@ -190,11 +196,51 @@ def _treinar(args) -> None:
     )
 
     if args.salvar:
-        destino = Path(args.out) / "metrics"
-        destino.mkdir(parents=True, exist_ok=True)
-        nome = f"treino_{args.encoding}_{args.dataset}_{args.seed}.csv"
-        r.historico.to_csv(destino / nome, index=False)
-        print(f"histórico salvo em {destino / nome}")
+        from tccqml.experiments import _salvar_pesos
+
+        nome = nome_treino(args)
+        metrics = Path(args.out) / "metrics"
+        metrics.mkdir(parents=True, exist_ok=True)
+        r.historico.to_csv(metrics / f"{nome}.csv", index=False)
+        # Uma linha com o modelo da época escolhida: é o que a fronteira de
+        # decisão precisa para ser desenhada sem retreinar.
+        resumo = {
+            **r.meta,
+            "L_reup": args.L_reup if args.encoding == "reuploading" else None,
+            "n_samples": args.n_samples,
+            "acc_treino": r.acc_treino,
+            "acc_val": r.acc_val,
+            "acc_teste": r.acc_teste,
+            "epoca_escolhida": r.epoca_escolhida,
+        }
+        pd.DataFrame([resumo]).to_csv(metrics / f"{nome}_resumo.csv", index=False)
+        _salvar_pesos(Path(args.out) / "weights", nome, r)
+        print(f"histórico salvo em {metrics / f'{nome}.csv'}")
+        print(f"resumo salvo em {metrics / f'{nome}_resumo.csv'}")
+        print(f"pesos salvos em {Path(args.out) / 'weights' / f'{nome}.npz'}")
+
+
+def nome_treino(args) -> str:
+    """Nome dos arquivos de `treinar --salvar`.
+
+    Com o protocolo padrão é `treino_<encoding>_<dataset>_<seed>`; cada opção
+    que foge de `PADRAO` acrescenta um sufixo, para que dois treinos diferentes
+    não se sobrescrevam.
+    """
+    nome = f"treino_{args.encoding}_{args.dataset}_{args.seed}"
+    if args.ansatz != PADRAO.ansatz:
+        nome += f"_{args.ansatz}"
+    if args.n_layers != PADRAO.n_layers:
+        nome += f"_camadas{args.n_layers}"
+    if args.encoding == "reuploading" and args.L_reup != PADRAO.L_reup:
+        nome += f"_L{args.L_reup}"
+    if args.lr != PADRAO.lr:
+        nome += f"_lr{args.lr:g}"
+    if args.epocas != PADRAO.epocas:
+        nome += f"_ep{args.epocas}"
+    if args.n_samples != PADRAO.n_samples:
+        nome += f"_n{args.n_samples}"
+    return nome
 
 
 def main(argv: list[str] | None = None) -> int:

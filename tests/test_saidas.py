@@ -85,6 +85,35 @@ def test_cli_treina_de_ponta_a_ponta(capsys):
     assert "acurácia" in saida
 
 
+def test_cli_treinar_salvar_grava_pesos_que_reproduzem_o_teste(tmp_path):
+    """Os pesos gravados são os da época escolhida: refazem a acc_teste do resumo."""
+    import numpy as np
+
+    from tccqml import model
+    from tccqml.data import load_dataset
+    from tccqml.metrics import accuracy
+
+    base = ["--out", str(tmp_path), "treinar", "--encoding", "reuploading",
+            "--dataset", "moons", "--epocas", "2", "--n-samples", "60", "--salvar"]
+    cli.main(base)
+    nome = "treino_reuploading_moons_42_ep2_n60"
+    assert (tmp_path / "metrics" / f"{nome}.csv").exists()
+    resumo = pd.read_csv(tmp_path / "metrics" / f"{nome}_resumo.csv").iloc[0]
+    pesos = np.load(tmp_path / "weights" / f"{nome}.npz")
+
+    ds = load_dataset("moons", n_samples=60, seed=42)
+    clf = model.build("reuploading", n_features=2, enc_kwargs={"L_reup": 3})
+    alpha = pesos["alpha"] if "alpha" in pesos.files else None
+    previsto = model.prever(clf, pesos["weights"], alpha, float(pesos["bias"]), ds.X_test)
+    assert accuracy(ds.y_test, previsto) == pytest.approx(resumo["acc_teste"])
+    assert resumo["epoca_escolhida"] >= 1
+
+    # Um lr fora do protocolo ganha sufixo e não sobrescreve o treino anterior.
+    cli.main(base + ["--lr", "0.03"])
+    assert (tmp_path / "weights" / f"{nome}.npz").exists()
+    assert (tmp_path / "weights" / "treino_reuploading_moons_42_lr0.03_ep2_n60.npz").exists()
+
+
 def test_latex_e_um_ambiente_table_completo():
     df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
 

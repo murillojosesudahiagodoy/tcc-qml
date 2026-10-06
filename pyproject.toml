@@ -16,7 +16,8 @@ dependencies = [
 # Extras opcionais: `pip install -e ".[dev]"` para desenvolver, `[notebooks]` para os .ipynb.
 [project.optional-dependencies]
 dev = ["pytest>=8.2", "ruff>=0.5"]
-notebooks = ["jupyterlab>=4.2", "ipykernel>=6.29"]
+# pymupdf: o notebook rasteriza os PDFs de `figuras` para exibi-los.
+notebooks = ["jupyterlab>=4.2", "ipykernel>=6.29", "ipywidgets>=8.1", "pymupdf>=1.24"]
 
 [project.scripts]
 tccqml = "tccqml.cli:main"

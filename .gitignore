@@ -19,6 +19,8 @@ htmlcov/
 results/**
 !results/**/
 !results/**/.gitkeep
+# Saídas do treino interativo do notebook: nunca são resultado oficial.
+results/notebook/
 
 # Texto do TCC (PDFs pesados) e documentos de processo: servem para PRODUZIR o
 # trabalho, nao para quem clona e quer rodar. Ficam so na maquina do autor.
