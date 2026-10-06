@@ -9,8 +9,10 @@ Cada experimento do trabalho é um subcomando:
     python -m tccqml ablacao
     python -m tccqml varredura --parametro n-layers
     python -m tccqml diagnostico
+    python -m tccqml verificacoes
     python -m tccqml espectro
     python -m tccqml comparar
+    python -m tccqml sensibilidade
     python -m tccqml varredura
     python -m tccqml tabelas
     python -m tccqml figuras
@@ -64,6 +66,12 @@ def _parser() -> argparse.ArgumentParser:
     c.add_argument("--encodings", nargs="+", default=list(PADRAO.encodings_grade))
     c.add_argument("--datasets", nargs="+", default=list(PADRAO.datasets_grade))
 
+    sens = sub.add_parser(
+        "sensibilidade",
+        help="verificação do lr: varre lr_candidatos e escolhe pela validação",
+    )
+    sens.add_argument("--sementes", type=int, nargs="+", default=list(PADRAO.sementes))
+
     v = sub.add_parser(
         "varredura",
         help="varre L do re-uploading ou, como controle, as camadas do angle",
@@ -98,6 +106,12 @@ def _parser() -> argparse.ArgumentParser:
     )
     d.add_argument("--sementes", type=int, nargs="+", default=list(PADRAO.sementes))
 
+    vf = sub.add_parser(
+        "verificacoes",
+        help="controle linear nas 9 funções de Fourier e limiar de g no circles",
+    )
+    vf.add_argument("--sementes", type=int, nargs="+", default=list(PADRAO.sementes))
+
     e = sub.add_parser("espectro", help="Omega medido por FFT, contra a Tabela 5 do texto")
     e.add_argument("--valores", type=int, nargs="+", default=[1, 2, 3])
 
@@ -128,6 +142,7 @@ def _listar() -> None:
         "epocas",
         "batch_size",
         "lr",
+        "lr_candidatos",
         "sementes",
         "shots",
     ):
@@ -198,6 +213,10 @@ def main(argv: list[str] | None = None) -> int:
             datasets=tuple(args.datasets),
             sementes=tuple(args.sementes),
         )
+    elif args.comando == "sensibilidade":
+        from tccqml.experiments import rodar_sensibilidade_lr
+
+        rodar_sensibilidade_lr(out=args.out, sementes=tuple(args.sementes))
     elif args.comando == "varredura":
         from tccqml.experiments import rodar_varredura_camadas, rodar_varredura_L
 
@@ -217,6 +236,10 @@ def main(argv: list[str] | None = None) -> int:
         from tccqml.experiments import diagnostico_amplitude
 
         diagnostico_amplitude(out=args.out, sementes=tuple(args.sementes))
+    elif args.comando == "verificacoes":
+        from tccqml.verificacoes import rodar_verificacoes
+
+        rodar_verificacoes(out=args.out, sementes=tuple(args.sementes))
     elif args.comando == "espectro":
         from tccqml.espectro import tabela_espectro
 

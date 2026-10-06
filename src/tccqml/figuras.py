@@ -1,6 +1,6 @@
 """Geração das figuras do TCC — a Etapa 10 do roteiro.
 
-Sete figuras em PDF vetorial, com os nomes exatos que o LaTeX referencia.
+Nove figuras em PDF vetorial, com os nomes exatos que o LaTeX referencia.
 
 Convenções, todas deliberadas:
 
@@ -428,6 +428,88 @@ def fig_custo_por_codificacao(resumo: pd.DataFrame, destino: Path) -> Path:
     return _salvar(fig, "custo-por-codificacao.pdf", destino)
 
 
+def fig_sensibilidade_lr(por_treino: pd.DataFrame, destino: Path) -> Path:
+    """Acurácia de validação média contra o lr, um painel por conjunto.
+
+    É a validação, e não o teste, que vai no eixo vertical: é ela que escolhe
+    o lr, e a figura mostra exatamente o que a escolha viu. A linha vertical
+    tracejada marca o lr do protocolo (`PADRAO.lr`), o da comparação
+    principal. Curva plana em torno dela = codificação insensível ao lr comum.
+    """
+    datasets = _presentes(por_treino["dataset"], ORDEM_DATASETS)
+    fig, eixos = plt.subplots(
+        1, len(datasets), figsize=(6.5, 2.5), sharey=True, squeeze=False
+    )
+    for eixo, dataset in zip(eixos[0], datasets):
+        fatia = por_treino[por_treino["dataset"] == dataset]
+        for encoding in _presentes(fatia["encoding"], ORDEM_ENCODINGS):
+            media = fatia[fatia["encoding"] == encoding].groupby("lr")["acc_val"].mean()
+            eixo.plot(
+                media.index,
+                media.values,
+                linewidth=1.3,
+                markersize=5,
+                label=NOMES.get(encoding, encoding),
+                **_estilo(encoding),
+            )
+        eixo.axvline(PADRAO.lr, color="#7f7f7f", linestyle="--", linewidth=0.9)
+        eixo.set_xscale("log")
+        lrs = sorted(fatia["lr"].unique())
+        eixo.set_xticks(lrs)
+        eixo.set_xticklabels([f"{v:g}" for v in lrs])
+        eixo.minorticks_off()
+        eixo.set_xlabel(f"{NOMES.get(dataset, dataset)}\ntaxa de aprendizado")
+    eixos[0][0].set_ylabel("acurácia de validação")
+    itens, rotulos = eixos[0][0].get_legend_handles_labels()
+    fig.legend(itens, rotulos, loc="outside upper center", ncol=len(itens), frameon=False)
+    return _salvar(fig, "sensibilidade-lr.pdf", destino)
+
+
+def fig_limiar_circles(destino: Path, seed: int = PADRAO.seed) -> Path:
+    """Histogramas de g = (sin x1 + sin x2)/2 por classe no circles, sem e com ruído.
+
+    Usa o TREINO da semente `seed` — o mesmo conjunto em que o limiar é
+    escolhido — e marca o limiar escolhido com a mesma função de
+    `verificacoes`, para a figura mostrar exatamente o que a regra viu. Como
+    `fig_datasets`, é calculada na hora: não depende de CSV.
+    """
+    from tccqml.verificacoes import _carregar, escolher_limiar, g_circles
+
+    classes = [
+        {"color": "#4c72b0", "hatch": "", "label": "círculo externo (classe 0)"},
+        {"color": "#c44e52", "hatch": "///", "label": "círculo interno (classe 1)"},
+    ]
+    versoes = (("sem ruído", 0.0), (f"ruído {PADRAO.noise:g}", PADRAO.noise))
+    fig, eixos = plt.subplots(1, len(versoes), figsize=(6.5, 2.4), sharey=True, squeeze=False)
+    for eixo, (rotulo, noise) in zip(eixos[0], versoes):
+        ds = _carregar("circles", seed, PADRAO, noise=noise)
+        g = g_circles(ds.X_train)
+        limiar, _ = escolher_limiar(g, ds.y_train)
+        bordas = np.linspace(g.min(), g.max(), 31)
+        for classe, estilo in enumerate(classes):
+            eixo.hist(
+                g[ds.y_train == classe],
+                bins=bordas,
+                color=estilo["color"],
+                hatch=estilo["hatch"],
+                edgecolor="white" if estilo["hatch"] else estilo["color"],
+                alpha=0.75,
+                linewidth=0.0,
+            )
+        eixo.axvline(limiar, color="#1b1b1b", linestyle="--", linewidth=1.1)
+        eixo.set_xlabel(f"{rotulo}\n$g(x) = (\\sin x_1 + \\sin x_2)/2$")
+    eixos[0][0].set_ylabel("amostras de treino")
+    itens = [
+        Patch(facecolor=e["color"], hatch=e["hatch"], edgecolor="white", label=e["label"])
+        for e in classes
+    ]
+    itens.append(
+        Line2D([], [], color="#1b1b1b", linestyle="--", linewidth=1.1, label="limiar $t$ (treino)")
+    )
+    fig.legend(handles=itens, loc="outside upper center", ncol=3, frameon=False)
+    return _salvar(fig, "limiar-circles.pdf", destino)
+
+
 # --------------------------------------------------------------------------
 
 
@@ -452,6 +534,7 @@ def gerar_todas(out: str | Path = "results", verbose: bool = True) -> list[Path]
     with plt.rc_context(RC):
         gerados.append(fig_datasets(destino))
         gerados.append(fig_espectro(destino))
+        gerados.append(fig_limiar_circles(destino))
 
         comparacao = _ler("comparacao.csv")
         if comparacao is not None:
@@ -466,6 +549,10 @@ def gerar_todas(out: str | Path = "results", verbose: bool = True) -> list[Path]
         varredura = _ler("varredura_L.csv")
         if varredura is not None:
             gerados.append(fig_acuracia_vs_L(varredura, destino))
+
+        sensibilidade = _ler("sensibilidade_lr.csv")
+        if sensibilidade is not None:
+            gerados.append(fig_sensibilidade_lr(sensibilidade, destino))
 
     if verbose:
         for caminho in gerados:

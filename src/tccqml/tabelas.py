@@ -6,9 +6,9 @@ Cada tabela sai em dois formatos: `.csv` (para conferir e reprocessar) e
 das Tabelas 2-5 que já estão no texto, e usa só `tabular` e `\\hline` — nenhum
 pacote novo precisa ser carregado.
 
-Seis das sete tabelas são DERIVADAS dos CSVs de `results/metrics/` e não
+Nove das dez tabelas são DERIVADAS dos CSVs de `results/metrics/` e não
 devem ser editadas à mão: se um número estiver estranho, o lugar de corrigir é
-o experimento, não a tabela. A sétima (`tab_qualitativa`) é julgamento do autor
+o experimento, não a tabela. A décima (`tab_qualitativa`) é julgamento do autor
 e tem uma coluna que só se sabe depois de implementar.
 """
 
@@ -496,6 +496,43 @@ def tab_ablacao(ablacao: pd.DataFrame) -> tuple[pd.DataFrame, str]:
 
 
 # --------------------------------------------------------------------------
+# tab_diagnostico — o amplitude com as duas normalizações
+# --------------------------------------------------------------------------
+
+# Rótulo de `diagnostico_amplitude.csv` (coluna `normalizacao`) -> linha da tabela.
+# A do protocolo vem primeiro e é marcada como a usada no trabalho.
+NORMALIZACOES = {
+    "[0,pi]": "$[0, \\pi]$ (usada no trabalho)",
+    "[-1,1]": "$[-1, 1]$",
+}
+
+
+def tab_diagnostico(diagnostico: pd.DataFrame) -> tuple[pd.DataFrame, str]:
+    """Acurácia de teste do amplitude em [0, pi] contra [-1, 1], por conjunto.
+
+    O amplitude só vê a direção de x, e suas fronteiras são retas pela origem:
+    a normalização decide onde a origem cai em relação aos dados. O trabalho
+    mantém [0, pi] para todas as codificações; esta tabela mostra o preço
+    dessa escolha para o amplitude.
+    """
+    agregado = diagnostico.groupby(["normalizacao", "dataset"])["acc_teste"].agg(["mean", "std"])
+    datasets = [d for d in ORDEM_DATASETS if d in set(diagnostico["dataset"])]
+    presentes = [n for n in NORMALIZACOES if n in set(diagnostico["normalizacao"])]
+    tabela = pd.DataFrame({"Normalização": [NORMALIZACOES[n] for n in presentes]})
+    for dataset in datasets:
+        tabela[_rotulo(dataset)] = [
+            _media_desvio(*agregado.loc[(n, dataset)]) if (n, dataset) in agregado.index else ""
+            for n in presentes
+        ]
+    tex = to_latex(
+        tabela,
+        caption="Acurácia de teste do \\textit{amplitude} com duas normalizações dos dados.",
+        label="tab:diagnostico",
+    )
+    return tabela, tex
+
+
+# --------------------------------------------------------------------------
 # tab_mesmo_p — frequência contra número de parâmetros
 # --------------------------------------------------------------------------
 
@@ -533,6 +570,131 @@ def tab_mesmo_p(
         ),
         label="tab:mesmo-p",
         alinhamento="cc" + "c" * (2 * len(datasets)),
+    )
+    return tabela, tex
+
+
+# --------------------------------------------------------------------------
+# tab_sensibilidade — a codificação estava bem treinada com o lr comum?
+# --------------------------------------------------------------------------
+
+
+def _lr(valor: float) -> str:
+    return f"{float(valor):g}".replace(".", ",")
+
+
+def tab_sensibilidade(
+    resumo: pd.DataFrame, candidatos: list[float] | None = None
+) -> tuple[pd.DataFrame, str]:
+    """Acurácia de teste no lr do protocolo contra a do lr escolhido.
+
+    Uma linha por codificação; por conjunto, duas colunas. O lr escolhido sai
+    de `resumo_sensibilidade_lr.csv`, onde foi escolhido pela VALIDAÇÃO: o
+    teste aqui só mede o lr já escolhido. Se as duas colunas diferem menos que
+    o desvio, a codificação não estava limitada pela taxa de aprendizado.
+    """
+    resumo = _ordenar(resumo, "encoding", ORDEM_ENCODINGS)
+    encodings = list(resumo["encoding"].unique())
+    tabela = pd.DataFrame({"Codificação": [_rotulo(e) for e in encodings]})
+    for dataset in [d for d in ORDEM_DATASETS if d in set(resumo["dataset"])]:
+        fatia = resumo[resumo["dataset"] == dataset].set_index("encoding")
+        protocolo, escolhido = [], []
+        for e in encodings:
+            if e not in fatia.index:
+                protocolo.append("")
+                escolhido.append("")
+                continue
+            linha = fatia.loc[e]
+            protocolo.append(
+                _media_desvio(linha["acc_teste_mean_protocolo"], linha["acc_teste_std_protocolo"])
+            )
+            escolhido.append(
+                _media_desvio(linha["acc_teste_mean_escolhido"], linha["acc_teste_std_escolhido"])
+                + f" ({_lr(linha['lr_escolhido'])})"
+            )
+        tabela[f"{_rotulo(dataset)} (protocolo)"] = protocolo
+        tabela[f"{_rotulo(dataset)} (escolhido)"] = escolhido
+
+    lr_protocolo = _lr(resumo["lr_protocolo"].iloc[0])
+    n = _n_sementes(resumo.rename(columns={"n_sementes": "acc_teste_count"}))
+    if n is None:
+        sobre = "sobre as sementes"
+    elif n == 1:
+        sobre = "sobre uma semente"
+    else:
+        sobre = f"sobre {_POR_EXTENSO.get(n, n)} sementes"
+    lista = " entre " + ", ".join(_lr(c) for c in sorted(candidatos)) if candidatos else ""
+    tex = to_latex(
+        tabela,
+        caption=(
+            "Sensibilidade à taxa de aprendizado: acurácia de teste com o lr do "
+            f"protocolo ({lr_protocolo}) e com o lr escolhido{lista} (entre "
+            "parênteses) pela maior acurácia média de validação "
+            f"(média $\\pm$ desvio padrão {sobre})."
+        ),
+        label="tab:sensibilidade",
+        nota=(
+            "A escolha do lr usa só a validação; o conjunto de teste não "
+            "participa dela. Empate na validação: fica o lr do protocolo, se "
+            "empatado; senão, o menor. A comparação principal "
+            "(Tabela~\\ref{tab:acuracia}) continua com o lr do protocolo para "
+            "todas as codificações."
+        ),
+    )
+    return tabela, tex
+
+
+# --------------------------------------------------------------------------
+# tab_verificacoes — o que os dados permitem, independente do circuito
+# --------------------------------------------------------------------------
+
+
+def tab_verificacoes(controle: pd.DataFrame, limiar: pd.DataFrame) -> tuple[pd.DataFrame, str]:
+    """Controle linear por conjunto e regra g > t no circles, acurácia de teste.
+
+    Lê os CSVs POR TREINO (`controle_linear.csv`, `limiar_circles.csv`) e
+    agrega aqui, como a `tab_ablacao`. As duas linhas da regra g > t só têm a
+    coluna do circles: a função g foi pensada para a geometria dele.
+    """
+    datasets = [d for d in ORDEM_DATASETS if d in set(controle["dataset"])]
+    agregado = controle.groupby("dataset")["acc_teste"].agg(["mean", "std"])
+    linhas = [
+        {
+            "Verificação": "Controle linear (9 funções)",
+            **{_rotulo(d): _media_desvio(*agregado.loc[d]) for d in datasets},
+        }
+    ]
+    por_versao = limiar.groupby("versao")
+    for versao, rotulo in (("sem_ruido", "$g > t$, sem ruído"), ("com_ruido", "$g > t$, com ruído")):
+        if versao not in por_versao.groups:
+            continue
+        fatia = por_versao.get_group(versao)
+        if versao == "com_ruido" and "ruido" in fatia.columns:
+            rotulo = f"$g > t$, ruído {_dec(float(fatia['ruido'].iloc[0]), 2)}"
+        linha = {"Verificação": rotulo, **{_rotulo(d): "--" for d in datasets}}
+        linha[_rotulo("circles")] = _media_desvio(fatia["acc_teste"].mean(), fatia["acc_teste"].std())
+        linhas.append(linha)
+    tabela = pd.DataFrame(linhas)
+
+    n = controle["seed"].nunique()
+    sobre = "sobre uma semente" if n == 1 else f"sobre {_POR_EXTENSO.get(n, n)} sementes"
+    tex = to_latex(
+        tabela,
+        caption=(
+            "Verificações sobre os dados: acurácia de teste da regressão logística "
+            "nas nove funções $\\{1, \\cos x_j, \\sin x_j\\}$ e seus produtos, e da regra "
+            "$g(x) = (\\sin x_1 + \\sin x_2)/2 > t$ no \\textit{circles} "
+            f"(média $\\pm$ desvio padrão {sobre})."
+        ),
+        label="tab:verificacoes",
+        nota=(
+            "Coordenadas já normalizadas para $[0, \\pi]$, com as mesmas partições e "
+            "sementes da comparação principal. A regressão logística tem "
+            f"hiperparâmetros fixados antes de rodar ($C = {_dec(PADRAO.controle_linear_C, 1)}$); "
+            "o limiar $t$ e o sentido da desigualdade são escolhidos no treino. "
+            "Um separador nesse espaço de funções não prova que o circuito "
+            "quântico realize ou aprenda os mesmos coeficientes."
+        ),
     )
     return tabela, tex
 
@@ -643,11 +805,31 @@ def gerar_todas(out: str | Path = "results", verbose: bool = True) -> list[Path]
         df, tex = tab_ablacao(ablacao)
         gerados.append(_escrever(df, tex, "tab_ablacao", destino))
 
+    diagnostico = _ler("diagnostico_amplitude.csv")
+    if diagnostico is not None:
+        df, tex = tab_diagnostico(diagnostico)
+        gerados.append(_escrever(df, tex, "tab_diagnostico", destino))
+
     varredura_L = _ler("varredura_L.csv")
     varredura_camadas = _ler("varredura_camadas.csv")
     if varredura_L is not None and varredura_camadas is not None:
         df, tex = tab_mesmo_p(varredura_L, varredura_camadas)
         gerados.append(_escrever(df, tex, "tab_mesmo_p", destino))
+
+    sensibilidade = _ler("resumo_sensibilidade_lr.csv")
+    if sensibilidade is not None:
+        por_treino = metrics / "sensibilidade_lr.csv"
+        candidatos = (
+            sorted(pd.read_csv(por_treino)["lr"].unique()) if por_treino.exists() else None
+        )
+        df, tex = tab_sensibilidade(sensibilidade, candidatos)
+        gerados.append(_escrever(df, tex, "tab_sensibilidade", destino))
+
+    controle = _ler("controle_linear.csv")
+    limiar = _ler("limiar_circles.csv")
+    if controle is not None and limiar is not None:
+        df, tex = tab_verificacoes(controle, limiar)
+        gerados.append(_escrever(df, tex, "tab_verificacoes", destino))
 
     df, tex = tab_qualitativa()
     gerados.append(_escrever(df, tex, "tab_qualitativa", destino))

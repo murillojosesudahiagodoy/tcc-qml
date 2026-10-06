@@ -39,6 +39,19 @@ class Protocolo:
     epocas: int = 30
     batch_size: int = 20
     lr: float = 0.1
+    # Verificação de sensibilidade da taxa de aprendizado (`sensibilidade`),
+    # fora da comparação principal, que continua com `lr` para todas. Os
+    # candidatos foram fixados ANTES de qualquer execução desta verificação,
+    # para a grade não ser ajustada depois de ver resultado, e o orçamento
+    # (4 valores x 5 sementes) é o mesmo para todas as codificações: nenhuma
+    # ganha mais tentativas que as outras. A escolha entre eles é pela
+    # validação; o teste não participa.
+    lr_candidatos: tuple[float, ...] = (0.01, 0.03, 0.1, 0.3)
+    # Diferença absoluta abaixo da qual duas médias de acc_val empatam na
+    # escolha do lr. Só absorve erro de ponto flutuante: com 60 amostras de
+    # validação e 5 sementes as médias são múltiplos de 1/300, então médias
+    # distintas diferem em pelo menos ~3e-3, muito acima deste limiar.
+    lr_tolerancia_empate: float = 1e-9
 
     # --- reprodutibilidade ---
     seed: int = 42
@@ -57,6 +70,13 @@ class Protocolo:
     # Controle da varredura de L: angle com k camadas tem o mesmo p = 6k do
     # re-uploading com L = k, mas o espectro fixo em {-1, 0, 1}.
     n_layers_varredura: tuple[int, ...] = (1, 2, 3, 4, 5)
+
+    # --- verificações (`verificacoes`): fora da comparação principal ---
+    # Hiperparâmetros da regressão logística do controle linear, FIXADOS antes
+    # de rodar: não há busca, nem pela validação, para o controle não ganhar
+    # um ajuste que o circuito quântico não teve.
+    controle_linear_C: float = 1.0
+    controle_linear_max_iter: int = 1000
 
     # --- espectro ---
     espectro_n_pontos: int = 512

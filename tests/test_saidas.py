@@ -12,6 +12,7 @@ from tccqml.tabelas import (
     tab_ablacao,
     tab_acuracia,
     tab_custo,
+    tab_diagnostico,
     tab_mesmo_p,
     tab_qualitativa,
     to_latex,
@@ -210,6 +211,25 @@ def test_tab_ablacao_tem_uma_coluna_por_conjunto():
 
     assert list(tabela.columns) == ["\\textit{Ansatz}", "XOR", "\\textit{Moons}"]
     assert "0,900 $\\pm$ 0,000" in tex and "0,500" in tex
+
+
+def test_tab_diagnostico_sai_do_csv_com_o_protocolo_primeiro():
+    """Uma linha por normalização, [0, pi] primeiro, e média +- desvio do CSV."""
+    diagnostico = pd.DataFrame(
+        [
+            {"normalizacao": n, "dataset": d, "seed": s, "acc_teste": v + 0.1 * (s - 42)}
+            for n, v in (("[-1,1]", 0.5), ("[0,pi]", 0.8))
+            for d in ("xor", "circles")
+            for s in (42, 43)
+        ]
+    )
+
+    tabela, tex = tab_diagnostico(diagnostico)
+
+    assert list(tabela.columns) == ["Normalização", "XOR", "\\textit{Circles}"]
+    assert tabela["Normalização"].iloc[0].startswith("$[0, \\pi]$")
+    assert tabela["XOR"].iloc[0] == "0,850 $\\pm$ 0,071"
+    assert "\\label{tab:diagnostico}" in tex
 
 
 def test_tab_mesmo_p_recusa_p_diferente():

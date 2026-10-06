@@ -431,3 +431,177 @@ def diagnostico_amplitude(
             .to_string()
         )
     return diag
+
+
+# Colunas por treino de `sensibilidade_lr.csv`. `p` é `n_params_circuito`
+# (sem o viés), o mesmo `p` das contagens de custo.
+COLUNAS_SENSIBILIDADE = (
+    "encoding",
+    "dataset",
+    "lr",
+    "seed",
+    "acc_treino",
+    "acc_val",
+    "acc_teste",
+    "epoca_escolhida",
+    "p",
+    "n_qubits",
+)
+
+
+def rodar_sensibilidade_lr(
+    protocolo: Protocolo = PADRAO,
+    out: str | Path | None = None,
+    encodings: tuple[str, ...] | None = None,
+    datasets: tuple[str, ...] | None = None,
+    sementes: tuple[int, ...] | None = None,
+    verbose: bool = True,
+) -> pd.DataFrame:
+    """Verificação de sensibilidade da taxa de aprendizado.
+
+    A grade principal usa o mesmo `lr` para todas as codificações. Se uma
+    delas fica para trás, falta saber se é a representação que não alcança a
+    fronteira ou só o otimizador que não chegou lá com aquele passo. Esta
+    verificação separa as duas coisas: repete o treino da grade (mesmo split,
+    mesma inicialização, mesma escolha de época pela validação, o mesmo
+    `L_reup` no re-uploading) variando APENAS `lr` sobre `lr_candidatos`.
+
+    É um experimento à parte: grava em CSVs próprios e não toca nos da
+    comparação principal, que continua com `protocolo.lr`. Todas as
+    codificações recebem o mesmo orçamento de candidatos e sementes, e a
+    escolha do `lr` olha só a validação (`escolher_lr`) — o teste aparece no
+    resumo apenas como medida do lr já escolhido.
+    """
+    if not any(np.isclose(protocolo.lr, c) for c in protocolo.lr_candidatos):
+        raise ValueError(
+            f"lr do protocolo ({protocolo.lr}) fora de lr_candidatos: "
+            "a comparação com o lr da grade principal ficaria sem referência"
+        )
+    out = Path(out or protocolo.out)
+    encodings = encodings or protocolo.encodings_grade
+    datasets = datasets or protocolo.datasets_grade
+    sementes = sementes or protocolo.sementes
+
+    linhas = []
+    total = len(encodings) * len(datasets) * len(protocolo.lr_candidatos) * len(sementes)
+    i = 0
+    t_inicio = time.perf_counter()
+    for encoding in encodings:
+        for dataset in datasets:
+            for lr in protocolo.lr_candidatos:
+                variante = replace(protocolo, lr=lr)
+                for seed in sementes:
+                    i += 1
+                    _, resumo, _ = rodar_um(encoding, dataset, seed, variante)
+                    linhas.append(
+                        {
+                            "encoding": encoding,
+                            "dataset": dataset,
+                            "lr": lr,
+                            "seed": seed,
+                            "acc_treino": resumo["acc_treino"],
+                            "acc_val": resumo["acc_val"],
+                            "acc_teste": resumo["acc_teste"],
+                            "epoca_escolhida": resumo["epoca_escolhida"],
+                            "p": resumo["n_params_circuito"],
+                            "n_qubits": resumo["n_qubits"],
+                        }
+                    )
+                    if verbose:
+                        decorrido = time.perf_counter() - t_inicio
+                        restante = decorrido / i * (total - i)
+                        print(
+                            f"[{i:3d}/{total}] {encoding:12s} {dataset:8s} lr={lr:<5g} "
+                            f"seed={seed} val={resumo['acc_val']:.3f} "
+                            f"(faltam ~{restante / 60:.1f} min)"
+                        )
+
+    por_treino = pd.DataFrame(linhas, columns=list(COLUNAS_SENSIBILIDADE))
+    resumo = resumir_sensibilidade(por_treino, protocolo.lr, protocolo.lr_tolerancia_empate)
+
+    metrics = out / "metrics"
+    metrics.mkdir(parents=True, exist_ok=True)
+    por_treino.to_csv(metrics / "sensibilidade_lr.csv", index=False)
+    resumo.to_csv(metrics / "resumo_sensibilidade_lr.csv", index=False)
+    if verbose:
+        print("\nlr escolhido pela validação:")
+        print(
+            resumo.pivot(index="encoding", columns="dataset", values="lr_escolhido").to_string()
+        )
+        print(f"escrito em {metrics}")
+    return por_treino
+
+
+def escolher_lr(
+    por_treino: pd.DataFrame,
+    lr_protocolo: float,
+    tolerancia: float = PADRAO.lr_tolerancia_empate,
+) -> pd.DataFrame:
+    """O lr de maior acc_val média nas sementes, por (codificação, dataset).
+
+    Só `acc_val` entra aqui — a coluna `acc_teste` nem é lida. Escolher pelo
+    teste transformaria a acurácia de teste reportada numa estimativa
+    otimista, que é justamente o que a separação treino/validação/teste evita.
+
+    Empate (diferença absoluta até `tolerancia`, que vem de
+    `Protocolo.lr_tolerancia_empate` e só absorve erro de ponto flutuante):
+    fica o lr do protocolo, se ele está entre os empatados — a verificação só
+    deve "mudar" o lr quando houver ganho de fato na validação; senão, o menor
+    lr empatado, que é o passo mais conservador.
+    """
+    medias = por_treino.groupby(["encoding", "dataset", "lr"])["acc_val"].mean()
+    escolhas = []
+    for (encoding, dataset), fatia in medias.groupby(level=["encoding", "dataset"]):
+        fatia = fatia.droplevel(["encoding", "dataset"])
+        melhor = fatia.max()
+        empatados = sorted(lr for lr, v in fatia.items() if np.isclose(v, melhor, rtol=0, atol=tolerancia))
+        protocolo_empatado = [lr for lr in empatados if np.isclose(lr, lr_protocolo)]
+        lr = protocolo_empatado[0] if protocolo_empatado else empatados[0]
+        escolhas.append({"encoding": encoding, "dataset": dataset, "lr_escolhido": lr})
+    return pd.DataFrame(escolhas)
+
+
+def resumir_sensibilidade(
+    por_treino: pd.DataFrame,
+    lr_protocolo: float,
+    tolerancia: float = PADRAO.lr_tolerancia_empate,
+) -> pd.DataFrame:
+    """Lr escolhido pela validação ao lado do lr do protocolo, por (enc, dataset).
+
+    Para cada lado vêm média e desvio de `acc_val` e de `acc_teste` nas
+    sementes. Ver os dois lado a lado é o que responde à pergunta: se a
+    acurácia de teste no lr escolhido não muda em relação à do protocolo
+    além do desvio, a codificação já estava bem treinada com o lr comum.
+    """
+    escolhas = escolher_lr(por_treino, lr_protocolo, tolerancia)
+
+    def _agregar(fatia: pd.DataFrame, sufixo: str) -> dict:
+        return {
+            f"acc_val_mean_{sufixo}": fatia["acc_val"].mean(),
+            f"acc_val_std_{sufixo}": fatia["acc_val"].std(),
+            f"acc_teste_mean_{sufixo}": fatia["acc_teste"].mean(),
+            f"acc_teste_std_{sufixo}": fatia["acc_teste"].std(),
+        }
+
+    linhas = []
+    for escolha in escolhas.itertuples(index=False):
+        do_par = por_treino[
+            (por_treino["encoding"] == escolha.encoding)
+            & (por_treino["dataset"] == escolha.dataset)
+        ]
+        no_escolhido = do_par[np.isclose(do_par["lr"], escolha.lr_escolhido)]
+        no_protocolo = do_par[np.isclose(do_par["lr"], lr_protocolo)]
+        linhas.append(
+            {
+                "encoding": escolha.encoding,
+                "dataset": escolha.dataset,
+                "lr_escolhido": escolha.lr_escolhido,
+                **_agregar(no_escolhido, "escolhido"),
+                "lr_protocolo": lr_protocolo,
+                **_agregar(no_protocolo, "protocolo"),
+                "n_sementes": int(no_escolhido["seed"].nunique()),
+                "p": do_par["p"].iloc[0],
+                "n_qubits": do_par["n_qubits"].iloc[0],
+            }
+        )
+    return pd.DataFrame(linhas)
