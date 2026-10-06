@@ -22,7 +22,7 @@ pytest
 ```
 
 O [`requirements-lock.txt`](requirements-lock.txt) fixa (`==`) todas as dependências do
-ambiente em que os resultados foram gerados, inclusive pytest e JupyterLab; o
+ambiente em que os resultados foram gerados, inclusive pytest, JupyterLab e ipywidgets; o
 `pip install -e .` depois dele só instala o próprio pacote, sem trocar nenhuma versão.
 O lock foi gerado e testado (`pytest`) no Windows 10, com Python 3.14.3. Em Linux e macOS
 ele não foi instalado de fato: só se conferiu que todas as versões fixadas têm wheel para
@@ -106,9 +106,9 @@ Há duas versões:
 | 5. Tabelas e figuras finais | todos os `tab_*` e PDFs, com a parte do TCC a que cada um corresponde |
 | 6. Resumo | subcomando, pergunta, arquivos, figuras e lugar no TCC; a sequência completa de comandos |
 
-**Como abrir.** Instale o extra `notebooks` (`pip install -e ".[notebooks]"`; o
-`requirements-lock.txt` ainda não fixa o ipywidgets) e abra o arquivo no **VS Code**, com o
-kernel da `.venv`, ou no **Jupyter** (`jupyter lab notebooks/tcc_qml.ipynb`). O notebook
+**Como abrir.** Instale o extra `notebooks` (`pip install -e ".[notebooks]"`) e abra o
+arquivo no **VS Code**, com o kernel da `.venv`, ou no **Jupyter**
+(`jupyter lab notebooks/tcc_qml.ipynb`). O notebook
 acha a raiz do repositório sozinho, em Windows ou Linux.
 
 Os painéis das seções 2 e 3 usam ipywidgets, que **só funcionam no Jupyter (Lab ou Notebook)
