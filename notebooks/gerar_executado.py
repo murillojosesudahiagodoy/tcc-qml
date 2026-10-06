@@ -78,6 +78,35 @@ def sem_repr_redundante(nb) -> None:
                 del dados["text/plain"]
 
 
+def juntar_streams(nb) -> None:
+    # O kernel às vezes manda o fim de um print numa mensagem à parte, e a mesma saída
+    # viraria um ou dois blocos conforme a execução; junta os blocos seguidos do mesmo canal.
+    for celula in nb.cells:
+        saidas = []
+        for saida in celula.get("outputs", []):
+            anterior = saidas[-1] if saidas else None
+            if (
+                saida.get("output_type") == "stream"
+                and anterior is not None
+                and anterior.get("output_type") == "stream"
+                and anterior["name"] == saida["name"]
+            ):
+                anterior["text"] += saida["text"]
+            else:
+                saidas.append(saida)
+        if "outputs" in celula:
+            celula["outputs"] = saidas
+
+
+def sem_tempo_de_execucao(nb) -> None:
+    # O "[ok em N s]" de cada subcomando varia de uma execução para outra; na cópia vira
+    # "[ok]". Os tempos de treino da coluna `segundos` dos CSVs não passam por aqui.
+    for celula in nb.cells:
+        for saida in celula.get("outputs", []):
+            if saida.get("output_type") == "stream":
+                saida["text"] = re.sub(r"\[ok em \d+ s\]", "[ok]", saida["text"])
+
+
 def main() -> None:
     nb = nbformat.read(ORIGEM, as_version=4)
     fixar_parametros(nb)
@@ -89,6 +118,8 @@ def main() -> None:
         resources={"metadata": {"path": str(PASTA)}},
     ).execute()
     sem_repr_redundante(nb)
+    juntar_streams(nb)
+    sem_tempo_de_execucao(nb)
 
     nb.cells.insert(0, nbformat.v4.new_markdown_cell(AVISO, id="executado"))
     # O nbstripout respeita esta chave e não apaga as saídas deste arquivo.
