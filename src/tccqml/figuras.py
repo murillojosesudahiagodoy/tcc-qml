@@ -278,7 +278,7 @@ def fig_acuracia_vs_L(varredura: pd.DataFrame, destino: Path) -> Path:
             label=NOMES.get(dataset, dataset),
             **estilo,
         )
-    eixo.set_xlabel("blocos de re-uploading $L$")
+    eixo.set_xlabel("repetições do re-uploading $R$")
     eixo.set_ylabel("acurácia de teste")
     eixo.set_xticks(sorted(varredura["L_reup"].dropna().unique()))
     eixo.legend(framealpha=0.9)
@@ -375,7 +375,7 @@ def fig_espectro(destino: Path, L_reups: tuple[int, ...] = (1, 2, 3)) -> Path:
             )
         limite = L if L is not None else 1
         eixo.axvline(limite + 0.5, color="#c44e52", linestyle="--", linewidth=1.1)
-        rotulo = NOMES.get(encoding, encoding) + (f", $L = {L}$" if L else "")
+        rotulo = NOMES.get(encoding, encoding) + (f", $R = {L}$" if L else "")
         eixo.set_xlabel(f"{rotulo}\n$\\omega$")
         eixo.set_xticks(range(n))
     eixos[0][0].set_ylabel("$|c_\\omega|$")

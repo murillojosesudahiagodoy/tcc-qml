@@ -432,7 +432,7 @@ def tab_espectro(espectro: pd.DataFrame) -> tuple[pd.DataFrame, str]:
     tabela = pd.DataFrame(
         {
             "Codificação": [
-                _rotulo(r.encoding) + ("" if pd.isna(r.L_reup) else f" ($L = {int(r.L_reup)}$)")
+                _rotulo(r.encoding) + ("" if pd.isna(r.L_reup) else f" ($R = {int(r.L_reup)}$)")
                 for r in espectro.itertuples()
             ],
             "$\\omega_{\\max}$ previsto": espectro["omega_max_previsto"].astype(int).values,
@@ -453,7 +453,7 @@ def tab_espectro(espectro: pd.DataFrame) -> tuple[pd.DataFrame, str]:
         label="tab:espectro",
         nota=(
             "A teoria dá um limite superior: nenhuma energia aparece fora de "
-            "$\\{-L, \\dots, L\\}^d$, mas nem todos os termos permitidos aparecem. "
+            "$\\{-R, \\dots, R\\}^d$, mas nem todos os termos permitidos aparecem. "
             "\\textit{Termos medidos}: pares $(\\omega_1, \\omega_2)$ com energia "
             "na FFT 2D; \\textit{Cruzados}: os que dependem dos dois atributos. "
             "Codificações \\textit{amplitude} e ZZ não aparecem porque a saída não "
@@ -556,7 +556,7 @@ def tab_mesmo_p(
     for k in valores:
         if int(p_reup.loc[k]) != int(p_angle.loc[k]):
             raise ValueError(f"p diferente para k = {k}: a comparação deixa de ser de mesmo p")
-        linha = {"$L$ ou camadas": k, "$p$": int(p_reup.loc[k])}
+        linha = {"$k$": k, "$p$": int(p_reup.loc[k])}
         for dataset in datasets:
             linha[f"{_rotulo(dataset)} (\\textit{{angle}})"] = _media_desvio(*angle.loc[(k, dataset)])
             linha[f"{_rotulo(dataset)} (\\textit{{re-up.}})"] = _media_desvio(*reup.loc[(k, dataset)])
@@ -565,8 +565,9 @@ def tab_mesmo_p(
     tex = to_latex(
         tabela,
         caption=(
-            "Acurácia de teste do \\textit{angle} com $k$ camadas no \\textit{ansatz} "
-            "contra o \\textit{re-uploading} com $L = k$ blocos: mesmo $p$, espectros diferentes."
+            "Acurácia de teste do \\textit{angle} com $L_\\text{var} = k$ camadas no "
+            "\\textit{ansatz} contra o \\textit{re-uploading} com $R = k$ repetições: "
+            "mesmo $p$, espectros diferentes."
         ),
         label="tab:mesmo-p",
         alinhamento="cc" + "c" * (2 * len(datasets)),
