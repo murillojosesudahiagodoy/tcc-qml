@@ -1,19 +1,19 @@
 \begin{table}[htb]
 \centering
-\caption{Espectro de Fourier medido por FFT 2D contra o limite da Tabela~\ref{tab:espectro-previsto}, com $d = 2$ atributos.}
+\caption{Espectro de Fourier medido por FFT 2D contra o limite da Tabela~\ref{tab:espectros}, com $d = 2$ atributos.}
 \label{tab:espectro}
 \begin{tabular}{lccccccc}
 \hline
 Codificação & $\omega_{\max}$ previsto & $\omega_{\max}$ em $x_1$ & $\omega_{\max}$ em $x_2$ & Termos previstos & Termos medidos & Cruzados & $p$ \\
 \hline
 \textit{Angle} & 1 & 1 & 1 & 9 & 6 & 4 & 12 \\
-\textit{Re-uploading} ($L = 1$) & 1 & 0 & 1 & 9 & 2 & 0 & 6 \\
-\textit{Re-uploading} ($L = 2$) & 2 & 1 & 2 & 25 & 10 & 8 & 12 \\
-\textit{Re-uploading} ($L = 3$) & 3 & 2 & 3 & 49 & 35 & 24 & 18 \\
+\textit{Re-uploading} ($R = 1$) & 1 & 0 & 1 & 9 & 2 & 0 & 6 \\
+\textit{Re-uploading} ($R = 2$) & 2 & 1 & 2 & 25 & 10 & 8 & 12 \\
+\textit{Re-uploading} ($R = 3$) & 3 & 2 & 3 & 49 & 35 & 24 & 18 \\
 \hline
 \end{tabular}
 \\[2pt]
-{\footnotesize A teoria dá um limite superior: nenhuma energia aparece fora de $\{-L, \dots, L\}^d$, mas nem todos os termos permitidos aparecem. \textit{Termos medidos}: pares $(\omega_1, \omega_2)$ com energia na FFT 2D; \textit{Cruzados}: os que dependem dos dois atributos. Codificações \textit{amplitude} e ZZ não aparecem porque a saída não é uma série de Fourier nos atributos.}
+{\footnotesize A teoria dá um limite superior: nenhuma energia aparece fora de $\{-R, \dots, R\}^d$, mas nem todos os termos permitidos aparecem. \textit{Termos medidos}: pares $(\omega_1, \omega_2)$ com energia na FFT 2D; \textit{Cruzados}: os que dependem dos dois atributos. Codificações \textit{amplitude} e ZZ não aparecem porque a saída não é uma série de Fourier nos atributos. Em $x_1$, a frequência máxima é $R - 1$: a última inserção de $x_1$ atua só no qubit 0 e não afeta a leitura de $Z_0$.}
 \\[2pt]
 {\footnotesize Fonte: Elaborada pelo autor.}
 \end{table}

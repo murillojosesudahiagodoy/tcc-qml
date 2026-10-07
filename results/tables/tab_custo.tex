@@ -2,7 +2,7 @@
 \centering
 \footnotesize
 \setlength{\tabcolsep}{2pt}
-\caption{Custo de circuito por codificação, com $n = 2$ atributos e o \textit{ansatz} congelado. Contagens feitas sobre o circuito já decomposto nas portas básicas.}
+\caption{Custo de circuito por codificação, com $d = 2$ atributos e o \textit{ansatz} congelado. Contagens feitas sobre o circuito já decomposto nas portas básicas.}
 \label{tab:custo}
 \begin{tabular}{lcccccccccccc}
 \hline
@@ -17,7 +17,7 @@ Codificação & $p$ & Prof. & Portas & CNOTs & Qubits & Prof. & Portas & CNOTs &
 \hline
 \end{tabular}
 \\[2pt]
-{\footnotesize Portas: total de portas básicas (rotações de um qubit e CNOTs); CNOTs: portas de dois qubits. O bloco de codificação usa os mesmos qubits do circuito completo. Custo por passo: o que um passo do otimizador custaria em \textit{hardware}. Contagens de gradiente analíticas: o treino usa retropropagação sobre o simulador, não \textit{parameter-shift}. \textit{Desloc.}: só as $2p$ avaliações deslocadas que dão as derivadas (Eq.~2.47). \textit{Aval./amostra}: $2p + 1$, com a avaliação sem deslocamento que dá o resíduo $f(x) + b - y$ do custo quadrático. \textit{Aval./passo}: $(2p + 1)|B|$. \textit{Shots/passo}: $(2p + 1)|B|S$, com $S$ \textit{shots} por avaliação.}
+{\footnotesize Portas: total de portas básicas (rotações de um eixo, Hadamards e CNOTs), sem contar fases globais; CNOTs: portas de dois qubits. O bloco de codificação usa os mesmos qubits do circuito completo. Custo por passo: o que um passo do otimizador custaria em \textit{hardware}. Contagens de gradiente analíticas: o treino usa retropropagação sobre o simulador, não \textit{parameter-shift}. \textit{Desloc.}: só as $2p$ avaliações deslocadas que dão as derivadas (Eq.~\eqref{eq:parameter-shift}). \textit{Aval./amostra}: $2p + 1$, com a avaliação sem deslocamento que dá o resíduo $f(x) + b - y$ do custo quadrático. \textit{Aval./passo}: $(2p + 1)|B|$. \textit{Shots/passo}: $(2p + 1)|B|S$, com $S$ \textit{shots} por avaliação. No \textit{amplitude}, o bloco de codificação inclui uma rotação $R_z$ de ângulo nulo emitida pela decomposição de preparação de estados do PennyLane.}
 \\[2pt]
 {\footnotesize Fonte: Elaborada pelo autor.}
 \end{table}

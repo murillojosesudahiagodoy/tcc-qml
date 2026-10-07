@@ -1,10 +1,10 @@
 \begin{table}[htb]
 \centering
-\caption{Sensibilidade à taxa de aprendizado: acurácia de teste com o lr do protocolo (0,1) e com o lr escolhido entre 0,01, 0,03, 0,1, 0,3 (entre parênteses) pela maior acurácia média de validação (média $\pm$ desvio padrão sobre cinco sementes).}
+\caption{Sensibilidade à taxa de aprendizado: acurácia de teste com o $\eta$ do protocolo (0,1) e com o $\eta$ escolhido entre 0,01, 0,03, 0,1, 0,3 (entre parênteses) pela maior acurácia média de validação (média $\pm$ desvio padrão sobre cinco sementes).}
 \label{tab:sensibilidade}
 \begin{tabular}{lcccccc}
 \hline
-Codificação & XOR (protocolo) & XOR (escolhido) & \textit{Moons} (protocolo) & \textit{Moons} (escolhido) & \textit{Circles} (protocolo) & \textit{Circles} (escolhido) \\
+Codificação & \textit{Xor} (protocolo) & \textit{Xor} (escolhido) & \textit{Moons} (protocolo) & \textit{Moons} (escolhido) & \textit{Circles} (protocolo) & \textit{Circles} (escolhido) \\
 \hline
 \textit{Angle} & 0,873 $\pm$ 0,045 & 0,873 $\pm$ 0,045 (0,1) & 0,847 $\pm$ 0,032 & 0,847 $\pm$ 0,059 (0,3) & 0,953 $\pm$ 0,025 & 0,953 $\pm$ 0,025 (0,1) \\
 \textit{Amplitude} & 0,693 $\pm$ 0,069 & 0,693 $\pm$ 0,056 (0,3) & 0,827 $\pm$ 0,019 & 0,837 $\pm$ 0,022 (0,3) & 0,783 $\pm$ 0,051 & 0,773 $\pm$ 0,045 (0,3) \\
@@ -13,7 +13,7 @@ Codificação & XOR (protocolo) & XOR (escolhido) & \textit{Moons} (protocolo) &
 \hline
 \end{tabular}
 \\[2pt]
-{\footnotesize A escolha do lr usa só a validação; o conjunto de teste não participa dela. Empate na validação: fica o lr do protocolo, se empatado; senão, o menor. A comparação principal (Tabela~\ref{tab:acuracia}) continua com o lr do protocolo para todas as codificações.}
+{\footnotesize A escolha de $\eta$ usa só a validação; o conjunto de teste não participa dela. Empate na validação: fica o $\eta$ do protocolo, se empatado; senão, o menor. A comparação principal (Tabela~\ref{tab:acuracia}) continua com o $\eta$ do protocolo para todas as codificações.}
 \\[2pt]
 {\footnotesize Fonte: Elaborada pelo autor.}
 \end{table}

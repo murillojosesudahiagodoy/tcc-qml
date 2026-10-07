@@ -1,5 +1,5 @@
 Codificação,Ponto forte,Ponto fraco,Dificuldade,Observação
-\textit{Angle},"circuito raso, um qubit por atributo, custo mínimo","espectro limitado a $\Omega = \{-1,0,1\}$ por atributo",baixa,primitiva pronta no PennyLane; nenhuma armadilha
-\textit{Amplitude},$\lceil \log_2 d \rceil$ qubits: o menor número de qubits,descarta a norma do vetor; fronteira quádrica homogênea,média,a normalização dos dados interage com a codificação e precisa de diagnóstico próprio
-\textit{Re-uploading},"espectro cresce com $L$: $\Omega = \{-L,\dots,L\}$",profundidade e $p$ crescem linearmente com $L$,média,não cabe no formato \emph{codifica e depois aplica o ansatz}; exigiu generalizar a montagem do circuito
-\textit{Feature map} ZZ,insere correlações entre atributos no bloco de dados,"$r\,d(d-1)$ CNOTs e profundidade $O(r d^2)$",alta,construção explícita; sem as Hadamards o operador é diagonal e o circuito fica inerte sem dar erro
+\textit{Angle},bloco de codificação com profundidade 1 e sem CNOTs,"um qubit por atributo; suporte $\Omega = \{-1,0,1\}$ por atributo",baixa,primitiva pronta no PennyLane; nenhuma armadilha
+\textit{Amplitude},$\lceil \log_2 d \rceil$ qubits para $d$ atributos,descarta a norma do vetor; fronteira formada por direções que partem da origem; preparação genérica com $O(d)$ CNOTs,média,a normalização dos dados interage com a codificação e precisa de diagnóstico próprio
+\textit{Re-uploading},"suporte cresce com $R$: $\Omega = \{-R,\dots,R\}$ por atributo",profundidade e $p$ crescem linearmente com $R$,média,não cabe no formato \emph{codifica e depois aplica o ansatz}; exigiu generalizar a montagem do circuito
+\textit{Feature map} ZZ,termos que dependem de pares de atributos já no bloco de dados,"$r_{\mathrm{ZZ}}\,d(d-1)$ CNOTs e profundidade $O(r_{\mathrm{ZZ}}\,d^2)$",alta,construção explícita; sem as Hadamards o operador é diagonal e o circuito fica inerte sem dar erro

@@ -1,10 +1,10 @@
 \begin{table}[htb]
 \centering
-\caption{Acurácia de teste do \textit{angle} com $k$ camadas no \textit{ansatz} contra o \textit{re-uploading} com $L = k$ blocos: mesmo $p$, espectros diferentes.}
+\caption{Acurácia de teste do \textit{angle} com $L_\text{var} = k$ camadas no \textit{ansatz} contra o \textit{re-uploading} com $R = k$ repetições: mesmo $p$, espectros diferentes.}
 \label{tab:mesmo-p}
 \begin{tabular}{cccccccc}
 \hline
-$L$ ou camadas & $p$ & XOR (\textit{angle}) & XOR (\textit{re-up.}) & \textit{Moons} (\textit{angle}) & \textit{Moons} (\textit{re-up.}) & \textit{Circles} (\textit{angle}) & \textit{Circles} (\textit{re-up.}) \\
+$k$ & $p$ & \textit{Xor} (\textit{angle}) & \textit{Xor} (\textit{re-up.}) & \textit{Moons} (\textit{angle}) & \textit{Moons} (\textit{re-up.}) & \textit{Circles} (\textit{angle}) & \textit{Circles} (\textit{re-up.}) \\
 \hline
 1 & 6 & 0,517 $\pm$ 0,058 & 0,517 $\pm$ 0,058 & 0,807 $\pm$ 0,069 & 0,807 $\pm$ 0,069 & 0,780 $\pm$ 0,046 & 0,780 $\pm$ 0,046 \\
 2 & 12 & 0,873 $\pm$ 0,045 & 0,880 $\pm$ 0,043 & 0,847 $\pm$ 0,032 & 0,860 $\pm$ 0,043 & 0,953 $\pm$ 0,025 & 0,943 $\pm$ 0,015 \\
@@ -13,6 +13,8 @@ $L$ ou camadas & $p$ & XOR (\textit{angle}) & XOR (\textit{re-up.}) & \textit{Mo
 5 & 30 & 0,887 $\pm$ 0,048 & 0,853 $\pm$ 0,055 & 0,847 $\pm$ 0,051 & 0,953 $\pm$ 0,025 & 0,943 $\pm$ 0,035 & 0,943 $\pm$ 0,030 \\
 \hline
 \end{tabular}
+\\[2pt]
+{\footnotesize Com $k = 1$, os dois modelos são o mesmo circuito (uma codificação seguida de uma camada treinável), e as colunas coincidem.}
 \\[2pt]
 {\footnotesize Fonte: Elaborada pelo autor.}
 \end{table}

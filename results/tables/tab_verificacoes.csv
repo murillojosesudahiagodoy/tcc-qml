@@ -1,4 +1,4 @@
-Verificação,XOR,\textit{Moons},\textit{Circles}
+Verificação,\textit{Xor},\textit{Moons},\textit{Circles}
 Controle linear (9 funções),"0,873 $\pm$ 0,045","0,850 $\pm$ 0,039","0,963 $\pm$ 0,022"
-"$g > t$, sem ruído",--,--,"1,000 $\pm$ 0,000"
-"$g > t$, ruído 0,15",--,--,"0,967 $\pm$ 0,020"
+"$g/2 > t$, sem ruído",--,--,"1,000 $\pm$ 0,000"
+"$g/2 > t$, ruído 0,15",--,--,"0,967 $\pm$ 0,020"
