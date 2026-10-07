@@ -342,7 +342,7 @@ def tab_custo(resumo: pd.DataFrame) -> tuple[pd.DataFrame, str]:
     tex = to_latex(
         tabela,
         caption=(
-            "Custo de circuito por codificação, com $n = 2$ atributos e o "
+            "Custo de circuito por codificação, com $d = 2$ atributos e o "
             "\\textit{ansatz} congelado. Contagens feitas sobre o circuito já "
             "decomposto nas portas básicas."
         ),
@@ -366,17 +366,20 @@ def tab_custo(resumo: pd.DataFrame) -> tuple[pd.DataFrame, str]:
         ],
         preambulo=["\\footnotesize", "\\setlength{\\tabcolsep}{2pt}"],
         nota=(
-            "Portas: total de portas básicas (rotações de um qubit e CNOTs); "
+            "Portas: total de portas básicas (rotações de um eixo, Hadamards e CNOTs), "
+            "sem contar fases globais; "
             "CNOTs: portas de dois qubits. O bloco de codificação usa os mesmos "
             "qubits do circuito completo. "
             "Custo por passo: o que um passo do otimizador custaria em "
             "\\textit{hardware}. Contagens de gradiente analíticas: o treino usa retropropagação "
             "sobre o simulador, não \\textit{parameter-shift}. "
             "\\textit{Desloc.}: só as $2p$ avaliações deslocadas que dão as "
-            "derivadas (Eq.~2.47). \\textit{Aval./amostra}: $2p + 1$, com a "
+            "derivadas (Eq.~\\eqref{eq:parameter-shift}). \\textit{Aval./amostra}: $2p + 1$, com a "
             "avaliação sem deslocamento que dá o resíduo $f(x) + b - y$ do custo "
             "quadrático. \\textit{Aval./passo}: $(2p + 1)|B|$. "
-            "\\textit{Shots/passo}: $(2p + 1)|B|S$, com $S$ \\textit{shots} por avaliação."
+            "\\textit{Shots/passo}: $(2p + 1)|B|S$, com $S$ \\textit{shots} por avaliação. "
+            "No \\textit{amplitude}, o bloco de codificação inclui uma rotação $R_z$ de "
+            "ângulo nulo emitida pela decomposição de preparação de estados do PennyLane."
         ),
     )
     return tabela, tex
@@ -448,7 +451,7 @@ def tab_espectro(espectro: pd.DataFrame) -> tuple[pd.DataFrame, str]:
         tabela,
         caption=(
             "Espectro de Fourier medido por FFT 2D contra o limite da "
-            "Tabela~\\ref{tab:espectro-previsto}, com $d = 2$ atributos."
+            "Tabela~\\ref{tab:espectros}, com $d = 2$ atributos."
         ),
         label="tab:espectro",
         nota=(
@@ -457,7 +460,8 @@ def tab_espectro(espectro: pd.DataFrame) -> tuple[pd.DataFrame, str]:
             "\\textit{Termos medidos}: pares $(\\omega_1, \\omega_2)$ com energia "
             "na FFT 2D; \\textit{Cruzados}: os que dependem dos dois atributos. "
             "Codificações \\textit{amplitude} e ZZ não aparecem porque a saída não "
-            "é uma série de Fourier nos atributos."
+            "é uma série de Fourier nos atributos. Em $x_1$, a frequência máxima é $R - 1$: "
+            "a última inserção de $x_1$ atua só no qubit 0 e não afeta a leitura de $Z_0$."
         ),
     )
     return tabela, tex
@@ -570,6 +574,10 @@ def tab_mesmo_p(
             "mesmo $p$, espectros diferentes."
         ),
         label="tab:mesmo-p",
+        nota=(
+            "Com $k = 1$, os dois modelos são o mesmo circuito (uma codificação seguida "
+            "de uma camada treinável), e as colunas coincidem."
+        ),
         alinhamento="cc" + "c" * (2 * len(datasets)),
     )
     return tabela, tex
@@ -628,17 +636,17 @@ def tab_sensibilidade(
     tex = to_latex(
         tabela,
         caption=(
-            "Sensibilidade à taxa de aprendizado: acurácia de teste com o lr do "
-            f"protocolo ({lr_protocolo}) e com o lr escolhido{lista} (entre "
+            "Sensibilidade à taxa de aprendizado: acurácia de teste com o $\\eta$ do "
+            f"protocolo ({lr_protocolo}) e com o $\\eta$ escolhido{lista} (entre "
             "parênteses) pela maior acurácia média de validação "
             f"(média $\\pm$ desvio padrão {sobre})."
         ),
         label="tab:sensibilidade",
         nota=(
-            "A escolha do lr usa só a validação; o conjunto de teste não "
-            "participa dela. Empate na validação: fica o lr do protocolo, se "
+            "A escolha de $\\eta$ usa só a validação; o conjunto de teste não "
+            "participa dela. Empate na validação: fica o $\\eta$ do protocolo, se "
             "empatado; senão, o menor. A comparação principal "
-            "(Tabela~\\ref{tab:acuracia}) continua com o lr do protocolo para "
+            "(Tabela~\\ref{tab:acuracia}) continua com o $\\eta$ do protocolo para "
             "todas as codificações."
         ),
     )
@@ -666,12 +674,12 @@ def tab_verificacoes(controle: pd.DataFrame, limiar: pd.DataFrame) -> tuple[pd.D
         }
     ]
     por_versao = limiar.groupby("versao")
-    for versao, rotulo in (("sem_ruido", "$g > t$, sem ruído"), ("com_ruido", "$g > t$, com ruído")):
+    for versao, rotulo in (("sem_ruido", "$g/2 > t$, sem ruído"), ("com_ruido", "$g/2 > t$, com ruído")):
         if versao not in por_versao.groups:
             continue
         fatia = por_versao.get_group(versao)
         if versao == "com_ruido" and "ruido" in fatia.columns:
-            rotulo = f"$g > t$, ruído {_dec(float(fatia['ruido'].iloc[0]), 2)}"
+            rotulo = f"$g/2 > t$, ruído {_dec(float(fatia['ruido'].iloc[0]), 2)}"
         linha = {"Verificação": rotulo, **{_rotulo(d): "--" for d in datasets}}
         linha[_rotulo("circles")] = _media_desvio(fatia["acc_teste"].mean(), fatia["acc_teste"].std())
         linhas.append(linha)
@@ -684,7 +692,7 @@ def tab_verificacoes(controle: pd.DataFrame, limiar: pd.DataFrame) -> tuple[pd.D
         caption=(
             "Verificações sobre os dados: acurácia de teste da regressão logística "
             "nas nove funções $\\{1, \\cos x_j, \\sin x_j\\}$ e seus produtos, e da regra "
-            "$g(x) = (\\sin x_1 + \\sin x_2)/2 > t$ no \\textit{circles} "
+            "$g(x)/2 > t$, com $g(x) = \\sin x_1 + \\sin x_2$, no \\textit{circles} "
             f"(média $\\pm$ desvio padrão {sobre})."
         ),
         label="tab:verificacoes",
