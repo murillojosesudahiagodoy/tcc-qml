@@ -77,9 +77,13 @@ def load_dataset(
     Ajustar no conjunto completo vaza informação dos conjuntos de avaliação e
     infla a acurácia.
 
-    O intervalo padrão [0, pi] é pensado para angle encoding: RY(theta)
-    percorre <Z> de +1 a -1 nesse trecho sem dar a volta, então dois
-    valores distintos de entrada nunca caem no mesmo estado.
+    O intervalo padrão [0, pi] é uma escolha de escala e localidade para o
+    angle encoding: diferenças entre atributos de treino ficam em [0, pi],
+    trecho em que o kernel cos^2((x - x')/2) decresce de 1 a 0, de modo que
+    pontos próximos viram estados parecidos e os extremos, estados
+    ortogonais. Não é uma condição para preservar informação: RY(pi/2)|0> e
+    RY(3 pi/2)|0> dão o mesmo <Z>, mas são estados ortogonais. Sem truncamento,
+    validação e teste podem cair um pouco fora de [0, pi].
 
     Os valores padrão vêm de `config.Protocolo` — o protocolo mora num lugar
     só, e o N = 300 da Seção 2.5.7 é o que de fato roda.
