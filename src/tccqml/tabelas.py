@@ -719,15 +719,15 @@ def tab_verificacoes(controle: pd.DataFrame, limiar: pd.DataFrame) -> tuple[pd.D
 QUALITATIVA = [
     {
         "Codificação": "angle",
-        "Ponto forte": "circuito raso, um qubit por atributo, custo mínimo",
-        "Ponto fraco": "espectro limitado a $\\Omega = \\{-1,0,1\\}$ por atributo",
+        "Ponto forte": "bloco de codificação com profundidade 1 e sem CNOTs",
+        "Ponto fraco": "um qubit por atributo; suporte $\\Omega = \\{-1,0,1\\}$ por atributo",
         "Dificuldade": "baixa",
         "Observação": "primitiva pronta no PennyLane; nenhuma armadilha",
     },
     {
         "Codificação": "amplitude",
-        "Ponto forte": "$\\lceil \\log_2 d \\rceil$ qubits: o menor número de qubits",
-        "Ponto fraco": "descarta a norma do vetor; fronteira quádrica homogênea",
+        "Ponto forte": "$\\lceil \\log_2 d \\rceil$ qubits para $d$ atributos",
+        "Ponto fraco": "descarta a norma do vetor; fronteira formada por direções que partem da origem; preparação genérica com $O(d)$ CNOTs",
         "Dificuldade": "média",
         "Observação": (
             "a normalização dos dados interage com a codificação e precisa de "
@@ -736,8 +736,8 @@ QUALITATIVA = [
     },
     {
         "Codificação": "reuploading",
-        "Ponto forte": "espectro cresce com $L$: $\\Omega = \\{-L,\\dots,L\\}$",
-        "Ponto fraco": "profundidade e $p$ crescem linearmente com $L$",
+        "Ponto forte": "suporte cresce com $R$: $\\Omega = \\{-R,\\dots,R\\}$ por atributo",
+        "Ponto fraco": "profundidade e $p$ crescem linearmente com $R$",
         "Dificuldade": "média",
         "Observação": (
             "não cabe no formato \\emph{codifica e depois aplica o ansatz}; "
@@ -746,8 +746,8 @@ QUALITATIVA = [
     },
     {
         "Codificação": "zz",
-        "Ponto forte": "insere correlações entre atributos no bloco de dados",
-        "Ponto fraco": "$r\\,d(d-1)$ CNOTs e profundidade $O(r d^2)$",
+        "Ponto forte": "termos que dependem de pares de atributos já no bloco de dados",
+        "Ponto fraco": "$r_{\\mathrm{ZZ}}\\,d(d-1)$ CNOTs e profundidade $O(r_{\\mathrm{ZZ}}\\,d^2)$",
         "Dificuldade": "alta",
         "Observação": (
             "construção explícita; sem as Hadamards o operador é diagonal e o "
@@ -764,8 +764,9 @@ def tab_qualitativa() -> tuple[pd.DataFrame, str]:
     tex = to_latex(
         tabela.drop(columns=["Observação"]),
         caption=(
-            "Comparação qualitativa das codificações, com a dificuldade de "
-            "implementação observada neste trabalho."
+            "Comparação qualitativa das codificações implementadas, para as "
+            "construções descritas no Capítulo~\\ref{cap:fundamentos}, com a "
+            "dificuldade de implementação observada neste trabalho."
         ),
         label="tab:qualitativa",
         alinhamento="lp{4.2cm}p{4.2cm}c",
