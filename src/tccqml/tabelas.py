@@ -33,7 +33,7 @@ ROTULOS = {
     "amplitude": "\\textit{Amplitude}",
     "reuploading": "\\textit{Re-uploading}",
     "zz": "\\textit{Feature map} ZZ",
-    "xor": "XOR",
+    "xor": "\\textit{Xor}",
     "moons": "\\textit{Moons}",
     "circles": "\\textit{Circles}",
 }

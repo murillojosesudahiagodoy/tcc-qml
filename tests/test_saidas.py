@@ -238,7 +238,7 @@ def test_tab_ablacao_tem_uma_coluna_por_conjunto():
 
     tabela, tex = tab_ablacao(ablacao)
 
-    assert list(tabela.columns) == ["\\textit{Ansatz}", "XOR", "\\textit{Moons}"]
+    assert list(tabela.columns) == ["\\textit{Ansatz}", "\\textit{Xor}", "\\textit{Moons}"]
     assert "0,900 $\\pm$ 0,000" in tex and "0,500" in tex
 
 
@@ -255,9 +255,9 @@ def test_tab_diagnostico_sai_do_csv_com_o_protocolo_primeiro():
 
     tabela, tex = tab_diagnostico(diagnostico)
 
-    assert list(tabela.columns) == ["Normalização", "XOR", "\\textit{Circles}"]
+    assert list(tabela.columns) == ["Normalização", "\\textit{Xor}", "\\textit{Circles}"]
     assert tabela["Normalização"].iloc[0].startswith("$[0, \\pi]$")
-    assert tabela["XOR"].iloc[0] == "0,850 $\\pm$ 0,071"
+    assert tabela["\\textit{Xor}"].iloc[0] == "0,850 $\\pm$ 0,071"
     assert "\\label{tab:diagnostico}" in tex
 
 

@@ -208,10 +208,10 @@ def test_tab_verificacoes():
 
     tabela, tex = tab_verificacoes(controle, limiar)
 
-    assert list(tabela.columns) == ["Verificação", "XOR", "\\textit{Moons}", "\\textit{Circles}"]
+    assert list(tabela.columns) == ["Verificação", "\\textit{Xor}", "\\textit{Moons}", "\\textit{Circles}"]
     assert len(tabela) == 3
     assert tabela.iloc[1]["\\textit{Circles}"] == "1,000 $\\pm$ 0,000"
-    assert tabela.iloc[2]["XOR"] == "--"
+    assert tabela.iloc[2]["\\textit{Xor}"] == "--"
     assert "ruído 0,15" in tabela.iloc[2]["Verificação"]
     assert "não prova" in tex and "treino" in tex
 

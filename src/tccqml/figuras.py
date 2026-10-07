@@ -44,7 +44,7 @@ NOMES = {
     "amplitude": "Amplitude",
     "reuploading": "Re-uploading",
     "zz": "Feature map ZZ",
-    "xor": "XOR",
+    "xor": "Xor",
     "moons": "Moons",
     "circles": "Circles",
 }

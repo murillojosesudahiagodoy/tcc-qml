@@ -260,13 +260,13 @@ def test_tab_sensibilidade_uma_linha_por_codificacao():
     assert len(tabela) == 2
     assert list(tabela.columns) == [
         "Codificação",
-        "XOR (protocolo)",
-        "XOR (escolhido)",
+        "\\textit{Xor} (protocolo)",
+        "\\textit{Xor} (escolhido)",
         "\\textit{Moons} (protocolo)",
         "\\textit{Moons} (escolhido)",
     ]
-    assert tabela.iloc[0]["XOR (protocolo)"] == "0,650 $\\pm$ 0,000"
-    assert tabela.iloc[0]["XOR (escolhido)"] == "0,850 $\\pm$ 0,000 (0,03)"
+    assert tabela.iloc[0]["\\textit{Xor} (protocolo)"] == "0,650 $\\pm$ 0,000"
+    assert tabela.iloc[0]["\\textit{Xor} (escolhido)"] == "0,850 $\\pm$ 0,000 (0,03)"
     assert "validação" in tex
     assert "sobre duas sementes" in tex
 
