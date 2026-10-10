@@ -1,16 +1,16 @@
 \begin{table}[htb]
 \centering
-\caption{Comparação qualitativa das codificações implementadas, para as construções descritas no Capítulo~\ref{cap:fundamentos}, com a dificuldade de implementação observada neste trabalho.}
+\caption[Comparação qualitativa das codificações implementadas]{Comparação qualitativa das codificações implementadas, para as construções descritas no Capítulo~\ref{cap:fundamentos}, com a dificuldade de implementação observada neste trabalho.}
 \label{tab:qualitativa}
 \begin{tabular}{lp{4.2cm}p{4.2cm}c}
-\hline
+\toprule
 Codificação & Ponto forte & Ponto fraco & Dificuldade \\
-\hline
+\midrule
 \textit{Angle} & bloco de codificação com profundidade 1 e sem CNOTs & um qubit por atributo; suporte $\Omega = \{-1,0,1\}$ por atributo & baixa \\
 \textit{Amplitude} & $\lceil \log_2 d \rceil$ qubits para $d$ atributos & descarta a norma do vetor; fronteira formada por direções que partem da origem; preparação genérica com $O(d)$ CNOTs & média \\
 \textit{Re-uploading} & suporte cresce com $R$: $\Omega = \{-R,\dots,R\}$ por atributo & profundidade e $p$ crescem linearmente com $R$ & média \\
 \textit{Feature map} ZZ & termos que dependem de pares de atributos já no bloco de dados & $r_{\mathrm{ZZ}}\,d(d-1)$ CNOTs e profundidade $O(r_{\mathrm{ZZ}}\,d^2)$ & alta \\
-\hline
+\bottomrule
 \end{tabular}
 \\[2pt]
 {\footnotesize Fonte: Elaborada pelo autor.}
