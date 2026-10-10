@@ -1,4 +1,4 @@
-"""Geração das figuras do TCC — a Etapa 10 do roteiro.
+"""Geração das figuras do TCC.
 
 Nove figuras em PDF vetorial, com os nomes exatos que o LaTeX referencia.
 
@@ -83,7 +83,9 @@ def _estilo(encoding: str) -> dict:
 def _salvar(fig, nome: str, destino: Path) -> Path:
     destino.mkdir(parents=True, exist_ok=True)
     caminho = destino / nome
-    fig.savefig(caminho, format="pdf")
+    # Sem data de criação nos metadados: regenerar uma figura sem mudança de
+    # conteúdo produz o mesmo arquivo, byte a byte, e não suja o diff.
+    fig.savefig(caminho, format="pdf", metadata={"CreationDate": None})
     plt.close(fig)
     return caminho
 
@@ -199,9 +201,9 @@ def fig_fronteiras(
                 clf = model.build(
                     encoding,
                     n_features=ds.n_features,
-                    n_layers=PADRAO.n_layers,
+                    L_var=PADRAO.L_var,
                     enc_kwargs=(
-                        {"L_reup": PADRAO.L_reup} if encoding == "reuploading" else None
+                        {"R": PADRAO.R} if encoding == "reuploading" else None
                     ),
                 )
                 alpha = guardado["alpha"] if "alpha" in guardado.files else None
@@ -218,7 +220,7 @@ def fig_fronteiras(
                     G2,
                     z,
                     levels=np.linspace(-1, 1, 21),
-                    cmap="RdBu",
+                    cmap="RdBu_r",
                     alpha=0.55,
                     extend="both",
                 )
@@ -242,9 +244,10 @@ def fig_fronteiras(
 
     # Uma legenda só, abaixo da grade: o marcador é a classe VERDADEIRA e a cor
     # do fundo é a PREVISÃO. Um erro é um marcador sobre o fundo da outra
-    # classe. O "RdBu" leva saída negativa (prevê 0) ao vermelho e positiva
-    # (prevê 1) ao azul, como `model.prever`.
-    mapa = plt.get_cmap("RdBu")
+    # classe. O "RdBu_r" leva saída negativa (prevê 0) ao azul e positiva
+    # (prevê 1) ao vermelho, a mesma cor do marcador da classe 1, como
+    # `model.prever`.
+    mapa = plt.get_cmap("RdBu_r")
     itens = [
         Line2D([], [], marker="o", color="#1b1b1b", linestyle="", markersize=5, label="classe 0 (teste)"),
         Line2D([], [], marker="^", color="#7a0f16", linestyle="", markersize=5, label="classe 1 (teste)"),
@@ -256,8 +259,8 @@ def fig_fronteiras(
     return _salvar(fig, "fronteiras-aprendidas.pdf", destino)
 
 
-def fig_acuracia_vs_L(varredura: pd.DataFrame, destino: Path) -> Path:
-    """Acurácia contra número de blocos do re-uploading (Previsões 1 e 5)."""
+def fig_acuracia_vs_R(varredura: pd.DataFrame, destino: Path) -> Path:
+    """Acurácia contra o número de repetições R do re-uploading (H1 e H5)."""
     fig, eixo = plt.subplots(figsize=(4.2, 2.8))
     datasets = _presentes(varredura["dataset"], ORDEM_DATASETS)
     estilos = [
@@ -267,7 +270,7 @@ def fig_acuracia_vs_L(varredura: pd.DataFrame, destino: Path) -> Path:
     ]
     for dataset, estilo in zip(datasets, estilos):
         fatia = varredura[varredura["dataset"] == dataset]
-        agregado = fatia.groupby("L_reup")["acc_teste"].agg(["mean", "std"])
+        agregado = fatia.groupby("R")["acc_teste"].agg(["mean", "std"])
         eixo.errorbar(
             agregado.index,
             agregado["mean"],
@@ -280,13 +283,13 @@ def fig_acuracia_vs_L(varredura: pd.DataFrame, destino: Path) -> Path:
         )
     eixo.set_xlabel("repetições do re-uploading $R$")
     eixo.set_ylabel("acurácia de teste")
-    eixo.set_xticks(sorted(varredura["L_reup"].dropna().unique()))
+    eixo.set_xticks(sorted(varredura["R"].dropna().unique()))
     eixo.legend(framealpha=0.9)
-    return _salvar(fig, "acuracia-vs-L.pdf", destino)
+    return _salvar(fig, "acuracia-vs-R.pdf", destino)
 
 
 def fig_acuracia_vs_custo(resumo: pd.DataFrame, destino: Path) -> Path:
-    """A pergunta final da Etapa 10: a melhor em acurácia foi a mais viável?
+    """Acurácia contra custo: a melhor em acurácia foi também a mais barata?
 
     Um ponto por (codificação, dataset). O eixo horizontal é a profundidade
     total do circuito, que é o custo que mais pesa em hardware ruidoso; o
@@ -336,17 +339,17 @@ def fig_acuracia_vs_custo(resumo: pd.DataFrame, destino: Path) -> Path:
     return _salvar(fig, "acuracia-vs-custo.pdf", destino)
 
 
-def fig_espectro(destino: Path, L_reups: tuple[int, ...] = (1, 2, 3)) -> Path:
-    """FFT de f(x) para L crescente, um par de barras por frequência.
+def fig_espectro(destino: Path, valores_R: tuple[int, ...] = (1, 2, 3)) -> Path:
+    """FFT de f(x) para R crescente, um par de barras por frequência.
 
     Cada atributo é varrido em [0, 2pi) com o outro fixo em pi/2, e os dois
     aparecem lado a lado: mostrar só o atributo de maior omega esconderia que
-    x_1 para em L - 1 (o anel de CNOTs e a medição de Z_0 desperdiçam o último
-    bloco de dados nesse atributo). O angle entra como piso, com
+    x_1 para em R - 1 (o anel de CNOTs e a medição de Z_0 desperdiçam o último
+    bloco de dados nesse atributo). O angle entra como referência, com
     Omega = {-1, 0, 1}.
     """
     configuracoes = [("angle", None, None)] + [
-        ("reuploading", {"L_reup": L}, L) for L in L_reups
+        ("reuploading", {"R": R}, R) for R in valores_R
     ]
     series = [
         {"color": "#4c72b0", "hatch": "", "label": r"varrendo $x_1$ ($x_2 = \pi/2$)"},
@@ -356,8 +359,8 @@ def fig_espectro(destino: Path, L_reups: tuple[int, ...] = (1, 2, 3)) -> Path:
     fig, eixos = plt.subplots(
         1, len(configuracoes), figsize=(6.5, 2.4), sharey=True, squeeze=False
     )
-    for eixo, (encoding, kwargs, L) in zip(eixos[0], configuracoes):
-        clf = model.build(encoding, n_features=2, n_layers=PADRAO.n_layers, enc_kwargs=kwargs)
+    for eixo, (encoding, kwargs, R) in zip(eixos[0], configuracoes):
+        clf = model.build(encoding, n_features=2, L_var=PADRAO.L_var, enc_kwargs=kwargs)
         w, alpha, _ = pesos_iniciais(clf, seed=PADRAO.seed)
         # Escala maior nos pesos excita todo o espectro acessível (mesmo
         # motivo de `espectro.tabela_espectro`).
@@ -373,9 +376,9 @@ def fig_espectro(destino: Path, L_reups: tuple[int, ...] = (1, 2, 3)) -> Path:
                 edgecolor="white" if serie["hatch"] else serie["color"],
                 linewidth=0.0,
             )
-        limite = L if L is not None else 1
+        limite = R if R is not None else 1
         eixo.axvline(limite + 0.5, color="#c44e52", linestyle="--", linewidth=1.1)
-        rotulo = NOMES.get(encoding, encoding) + (f", $R = {L}$" if L else "")
+        rotulo = NOMES.get(encoding, encoding) + (f", $R = {R}$" if R else "")
         eixo.set_xlabel(f"{rotulo}\n$\\omega$")
         eixo.set_xticks(range(n))
     eixos[0][0].set_ylabel("$|c_\\omega|$")
@@ -428,13 +431,13 @@ def fig_custo_por_codificacao(resumo: pd.DataFrame, destino: Path) -> Path:
     return _salvar(fig, "custo-por-codificacao.pdf", destino)
 
 
-def fig_sensibilidade_lr(por_treino: pd.DataFrame, destino: Path) -> Path:
-    """Acurácia de validação média contra o lr, um painel por conjunto.
+def fig_sensibilidade_eta(por_treino: pd.DataFrame, destino: Path) -> Path:
+    """Acurácia de validação média contra o eta, um painel por conjunto.
 
     É a validação, e não o teste, que vai no eixo vertical: é ela que escolhe
-    o lr, e a figura mostra exatamente o que a escolha viu. A linha vertical
-    tracejada marca o lr do protocolo (`PADRAO.lr`), o da comparação
-    principal. Curva plana em torno dela = codificação insensível ao lr comum.
+    o eta, e a figura mostra exatamente o que a escolha viu. A linha vertical
+    tracejada marca o eta do protocolo (`PADRAO.eta`), o da comparação
+    principal. Curva plana em torno dela = codificação insensível ao eta comum.
     """
     datasets = _presentes(por_treino["dataset"], ORDEM_DATASETS)
     fig, eixos = plt.subplots(
@@ -443,7 +446,7 @@ def fig_sensibilidade_lr(por_treino: pd.DataFrame, destino: Path) -> Path:
     for eixo, dataset in zip(eixos[0], datasets):
         fatia = por_treino[por_treino["dataset"] == dataset]
         for encoding in _presentes(fatia["encoding"], ORDEM_ENCODINGS):
-            media = fatia[fatia["encoding"] == encoding].groupby("lr")["acc_val"].mean()
+            media = fatia[fatia["encoding"] == encoding].groupby("eta")["acc_val"].mean()
             eixo.plot(
                 media.index,
                 media.values,
@@ -452,28 +455,28 @@ def fig_sensibilidade_lr(por_treino: pd.DataFrame, destino: Path) -> Path:
                 label=NOMES.get(encoding, encoding),
                 **_estilo(encoding),
             )
-        eixo.axvline(PADRAO.lr, color="#7f7f7f", linestyle="--", linewidth=0.9)
+        eixo.axvline(PADRAO.eta, color="#7f7f7f", linestyle="--", linewidth=0.9)
         eixo.set_xscale("log")
-        lrs = sorted(fatia["lr"].unique())
-        eixo.set_xticks(lrs)
-        eixo.set_xticklabels([f"{v:g}" for v in lrs])
+        etas = sorted(fatia["eta"].unique())
+        eixo.set_xticks(etas)
+        eixo.set_xticklabels([f"{v:g}" for v in etas])
         eixo.minorticks_off()
         eixo.set_xlabel(f"{NOMES.get(dataset, dataset)}\ntaxa de aprendizado")
     eixos[0][0].set_ylabel("acurácia de validação")
     itens, rotulos = eixos[0][0].get_legend_handles_labels()
     fig.legend(itens, rotulos, loc="outside upper center", ncol=len(itens), frameon=False)
-    return _salvar(fig, "sensibilidade-lr.pdf", destino)
+    return _salvar(fig, "sensibilidade-eta.pdf", destino)
 
 
 def fig_limiar_circles(destino: Path, seed: int = PADRAO.seed) -> Path:
-    """Histogramas de g = (sin x1 + sin x2)/2 por classe no circles, sem e com ruído.
+    """Histogramas de g/2, com g = sin x1 + sin x2, por classe no circles.
 
     Usa o TREINO da semente `seed` — o mesmo conjunto em que o limiar é
     escolhido — e marca o limiar escolhido com a mesma função de
     `verificacoes`, para a figura mostrar exatamente o que a regra viu. Como
     `fig_datasets`, é calculada na hora: não depende de CSV.
     """
-    from tccqml.verificacoes import _carregar, escolher_limiar, g_circles
+    from tccqml.verificacoes import _carregar, escolher_limiar, g
 
     classes = [
         {"color": "#4c72b0", "hatch": "", "label": "círculo externo (classe 0)"},
@@ -483,12 +486,12 @@ def fig_limiar_circles(destino: Path, seed: int = PADRAO.seed) -> Path:
     fig, eixos = plt.subplots(1, len(versoes), figsize=(6.5, 2.4), sharey=True, squeeze=False)
     for eixo, (rotulo, noise) in zip(eixos[0], versoes):
         ds = _carregar("circles", seed, PADRAO, noise=noise)
-        g = g_circles(ds.X_train)
-        limiar, _ = escolher_limiar(g, ds.y_train)
-        bordas = np.linspace(g.min(), g.max(), 31)
+        metade = g(ds.X_train) / 2  # a quantidade comparada com t na regra g/2 > t
+        limiar, _ = escolher_limiar(metade, ds.y_train)
+        bordas = np.linspace(metade.min(), metade.max(), 31)
         for classe, estilo in enumerate(classes):
             eixo.hist(
-                g[ds.y_train == classe],
+                metade[ds.y_train == classe],
                 bins=bordas,
                 color=estilo["color"],
                 hatch=estilo["hatch"],
@@ -497,7 +500,7 @@ def fig_limiar_circles(destino: Path, seed: int = PADRAO.seed) -> Path:
                 linewidth=0.0,
             )
         eixo.axvline(limiar, color="#1b1b1b", linestyle="--", linewidth=1.1)
-        eixo.set_xlabel(f"{rotulo}\n$g(x) = (\\sin x_1 + \\sin x_2)/2$")
+        eixo.set_xlabel(f"{rotulo}\n$g(x)/2 = (\\sin x_1 + \\sin x_2)/2$")
     eixos[0][0].set_ylabel("amostras de treino")
     itens = [
         Patch(facecolor=e["color"], hatch=e["hatch"], edgecolor="white", label=e["label"])
@@ -546,13 +549,13 @@ def gerar_todas(out: str | Path = "results", verbose: bool = True) -> list[Path]
             gerados.append(fig_custo_por_codificacao(resumo, destino))
             gerados.append(fig_fronteiras(resumo, out / "weights", destino))
 
-        varredura = _ler("varredura_L.csv")
+        varredura = _ler("varredura_R.csv")
         if varredura is not None:
-            gerados.append(fig_acuracia_vs_L(varredura, destino))
+            gerados.append(fig_acuracia_vs_R(varredura, destino))
 
-        sensibilidade = _ler("sensibilidade_lr.csv")
+        sensibilidade = _ler("sensibilidade_eta.csv")
         if sensibilidade is not None:
-            gerados.append(fig_sensibilidade_lr(sensibilidade, destino))
+            gerados.append(fig_sensibilidade_eta(sensibilidade, destino))
 
     if verbose:
         for caminho in gerados:

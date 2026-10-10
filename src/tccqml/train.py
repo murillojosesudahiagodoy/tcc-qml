@@ -1,4 +1,4 @@
-"""Treinamento do classificador variacional (Etapa 8)."""
+"""Treinamento do classificador variacional."""
 
 import copy
 from dataclasses import dataclass, field
@@ -38,7 +38,7 @@ def treinar(
     ds: Dataset,
     epocas: int = 30,
     batch_size: int = 20,
-    lr: float = 0.1,
+    eta: float = 0.1,
     seed: int = 42,
     verbose: bool = True,
 ) -> Resultado:
@@ -46,9 +46,9 @@ def treinar(
 
     O gradiente do circuito é obtido por retropropagação sobre a simulação:
     o dispositivo `default.qubit` diferencia o próprio simulador, que é o
-    caminho mais barato em software (Seção 2.3.5.1). O parameter-shift NÃO é
-    executado aqui — ele é contabilizado ANALITICAMENTE em `circuit_stats.py`
-    (Eqs. 2.47 e 2.48), porque é o custo que o mesmo treino teria em hardware
+    caminho mais barato em software. O parameter-shift NÃO é executado aqui —
+    ele é contabilizado ANALITICAMENTE em `circuit_stats.py`, porque é o custo
+    que o mesmo treino teria em hardware
     real. O passo de atualização é clássico, e é isso que torna o modelo
     híbrido.
 
@@ -62,7 +62,7 @@ def treinar(
     honesta da generalização.
     """
     weights, alpha, bias = pesos_iniciais(clf, seed=seed)
-    opt = qml.AdamOptimizer(stepsize=lr)
+    opt = qml.AdamOptimizer(stepsize=eta)
     rng = np.random.default_rng(seed)
 
     X_tr = pnp.array(ds.X_train, requires_grad=False)
@@ -133,13 +133,13 @@ def treinar(
             "dataset": ds.name,
             "ansatz": clf.ansatz,
             "n_qubits": clf.n_qubits,
-            "n_layers": clf.n_layers,
+            "L_var": clf.L_var,
             "n_params_circuito": clf.n_params_circuito,
             "n_params_encoding": clf.n_params_encoding,
             "n_params": clf.n_params,
             "epocas": epocas,
             "batch_size": batch_size,
-            "lr": lr,
+            "eta": eta,
             "seed": seed,
         },
     )

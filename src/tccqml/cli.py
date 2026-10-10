@@ -4,10 +4,10 @@ Cada experimento do trabalho é um subcomando:
 
     python -m tccqml listar
     python -m tccqml treinar --encoding amplitude --dataset moons
-    python -m tccqml treinar --encoding reuploading --dataset moons --L-reup 3
+    python -m tccqml treinar --encoding reuploading --dataset moons --R 3
     python -m tccqml treinar --encoding angle --dataset xor --ansatz local
     python -m tccqml ablacao
-    python -m tccqml varredura --parametro n-layers
+    python -m tccqml varredura --parametro L_var
     python -m tccqml diagnostico
     python -m tccqml verificacoes
     python -m tccqml espectro
@@ -55,10 +55,18 @@ def _parser() -> argparse.ArgumentParser:
     t.add_argument("--encoding", default="angle", choices=sorted(ENCODINGS))
     t.add_argument("--dataset", default="moons", choices=sorted(_GENERATORS))
     t.add_argument("--ansatz", default=PADRAO.ansatz, choices=sorted(ANSATZE))
-    t.add_argument("--L-reup", type=int, default=PADRAO.L_reup, dest="L_reup")
-    t.add_argument("--n-layers", type=int, default=PADRAO.n_layers, dest="n_layers")
+    t.add_argument(
+        "--R",
+        type=int,
+        default=PADRAO.R,
+        dest="R",
+        help="repetições do data re-uploading",
+    )
+    t.add_argument(
+        "--L-var", type=int, default=PADRAO.L_var, dest="L_var", help="camadas do ansatz"
+    )
     t.add_argument("--epocas", type=int, default=PADRAO.epocas)
-    t.add_argument("--lr", type=float, default=PADRAO.lr)
+    t.add_argument("--eta", type=float, default=PADRAO.eta, help="taxa de aprendizado do Adam")
     t.add_argument("--seed", type=int, default=PADRAO.seed)
     t.add_argument("--n-samples", type=int, default=PADRAO.n_samples, dest="n_samples")
     t.add_argument(
@@ -74,19 +82,19 @@ def _parser() -> argparse.ArgumentParser:
 
     sens = sub.add_parser(
         "sensibilidade",
-        help="verificação do lr: varre lr_candidatos e escolhe pela validação",
+        help="verificação do eta: varre eta_candidatos e escolhe pela validação",
     )
     sens.add_argument("--sementes", type=int, nargs="+", default=list(PADRAO.sementes))
 
     v = sub.add_parser(
         "varredura",
-        help="varre L do re-uploading ou, como controle, as camadas do angle",
+        help="varre as repetições R do re-uploading ou, como controle, as camadas do angle",
     )
     v.add_argument(
         "--parametro",
-        default="L-reup",
-        choices=["L-reup", "n-layers"],
-        help="L-reup: blocos do re-uploading; n-layers: camadas do ansatz no angle",
+        default="R",
+        choices=["R", "L_var"],
+        help="R: repetições R do re-uploading; L_var: camadas L_var do ansatz no angle",
     )
     v.add_argument(
         "--valores",
@@ -118,7 +126,7 @@ def _parser() -> argparse.ArgumentParser:
     )
     vf.add_argument("--sementes", type=int, nargs="+", default=list(PADRAO.sementes))
 
-    e = sub.add_parser("espectro", help="Omega medido por FFT, contra a Tabela 5 do texto")
+    e = sub.add_parser("espectro", help="Omega medido por FFT, contra o suporte previsto no Cap. 2")
     e.add_argument("--valores", type=int, nargs="+", default=[1, 2, 3])
 
     sub.add_parser("tabelas", help="gera as tabelas .csv e .tex a partir dos CSVs")
@@ -144,11 +152,11 @@ def _listar() -> None:
         "noise",
         "val_size",
         "test_size",
-        "n_layers",
+        "L_var",
         "epocas",
         "batch_size",
-        "lr",
-        "lr_candidatos",
+        "eta",
+        "eta_candidatos",
         "sementes",
         "shots",
     ):
@@ -164,11 +172,11 @@ def _treinar(args) -> None:
         test_size=PADRAO.test_size,
         seed=args.seed,
     )
-    enc_kwargs = {"L_reup": args.L_reup} if args.encoding == "reuploading" else None
+    enc_kwargs = {"R": args.R} if args.encoding == "reuploading" else None
     clf = model.build(
         args.encoding,
         n_features=ds.n_features,
-        n_layers=args.n_layers,
+        L_var=args.L_var,
         ansatz=args.ansatz,
         enc_kwargs=enc_kwargs,
     )
@@ -186,7 +194,7 @@ def _treinar(args) -> None:
         ds,
         epocas=args.epocas,
         batch_size=PADRAO.batch_size,
-        lr=args.lr,
+        eta=args.eta,
         seed=args.seed,
         verbose=True,
     )
@@ -206,7 +214,7 @@ def _treinar(args) -> None:
         # decisão precisa para ser desenhada sem retreinar.
         resumo = {
             **r.meta,
-            "L_reup": args.L_reup if args.encoding == "reuploading" else None,
+            "R": args.R if args.encoding == "reuploading" else None,
             "n_samples": args.n_samples,
             "acc_treino": r.acc_treino,
             "acc_val": r.acc_val,
@@ -230,12 +238,12 @@ def nome_treino(args) -> str:
     nome = f"treino_{args.encoding}_{args.dataset}_{args.seed}"
     if args.ansatz != PADRAO.ansatz:
         nome += f"_{args.ansatz}"
-    if args.n_layers != PADRAO.n_layers:
-        nome += f"_camadas{args.n_layers}"
-    if args.encoding == "reuploading" and args.L_reup != PADRAO.L_reup:
-        nome += f"_L{args.L_reup}"
-    if args.lr != PADRAO.lr:
-        nome += f"_lr{args.lr:g}"
+    if args.L_var != PADRAO.L_var:
+        nome += f"_Lvar{args.L_var}"
+    if args.encoding == "reuploading" and args.R != PADRAO.R:
+        nome += f"_R{args.R}"
+    if args.eta != PADRAO.eta:
+        nome += f"_eta{args.eta:g}"
     if args.epocas != PADRAO.epocas:
         nome += f"_ep{args.epocas}"
     if args.n_samples != PADRAO.n_samples:
@@ -260,14 +268,14 @@ def main(argv: list[str] | None = None) -> int:
             sementes=tuple(args.sementes),
         )
     elif args.comando == "sensibilidade":
-        from tccqml.experiments import rodar_sensibilidade_lr
+        from tccqml.experiments import rodar_sensibilidade_eta
 
-        rodar_sensibilidade_lr(out=args.out, sementes=tuple(args.sementes))
+        rodar_sensibilidade_eta(out=args.out, sementes=tuple(args.sementes))
     elif args.comando == "varredura":
-        from tccqml.experiments import rodar_varredura_camadas, rodar_varredura_L
+        from tccqml.experiments import rodar_varredura_L_var, rodar_varredura_R
 
         valores = tuple(args.valores) if args.valores else None
-        runner = rodar_varredura_L if args.parametro == "L-reup" else rodar_varredura_camadas
+        runner = rodar_varredura_R if args.parametro == "R" else rodar_varredura_L_var
         runner(out=args.out, valores=valores, sementes=tuple(args.sementes))
     elif args.comando == "ablacao":
         from tccqml.experiments import rodar_ablacao
@@ -289,7 +297,7 @@ def main(argv: list[str] | None = None) -> int:
     elif args.comando == "espectro":
         from tccqml.espectro import tabela_espectro
 
-        tabela = tabela_espectro(L_reups=tuple(args.valores))
+        tabela = tabela_espectro(valores_R=tuple(args.valores))
         destino = Path(args.out) / "metrics"
         destino.mkdir(parents=True, exist_ok=True)
         tabela.to_csv(destino / "espectro.csv", index=False)

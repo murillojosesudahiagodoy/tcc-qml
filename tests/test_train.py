@@ -1,4 +1,4 @@
-"""Testes do laço de treinamento (Etapa 8)."""
+"""Testes do laço de treinamento."""
 
 import pytest
 
@@ -19,29 +19,29 @@ def test_accuracy_conta_acertos():
 def test_treino_reduz_o_custo():
     """Se o custo não cai ao longo das épocas, o modelo não está aprendendo."""
     ds = load_dataset("moons", n_samples=80, seed=42)
-    clf = model.build("angle", n_features=2, n_layers=2)
+    clf = model.build("angle", n_features=2, L_var=2)
 
-    r = treinar(clf, ds, epocas=8, batch_size=20, lr=0.2, seed=42, verbose=False)
+    r = treinar(clf, ds, epocas=8, batch_size=20, eta=0.2, seed=42, verbose=False)
 
     assert r.historico["custo"].iloc[-1] < r.historico["custo"].iloc[0]
 
 
 def test_treino_supera_o_acaso():
     ds = load_dataset("moons", n_samples=80, seed=42)
-    clf = model.build("angle", n_features=2, n_layers=2)
+    clf = model.build("angle", n_features=2, L_var=2)
 
-    r = treinar(clf, ds, epocas=10, batch_size=20, lr=0.2, seed=42, verbose=False)
+    r = treinar(clf, ds, epocas=10, batch_size=20, eta=0.2, seed=42, verbose=False)
 
     assert r.acc_treino > 0.6
 
 
 @pytest.mark.parametrize("encoding", ["angle", "amplitude", "reuploading", "zz"])
 def test_todas_as_codificacoes_treinam(encoding):
-    """A Etapa 9 exige que trocar a codificação seja trocar uma string."""
+    """A comparação exige que trocar a codificação seja trocar uma string."""
     ds = load_dataset("moons", n_samples=80, seed=42)
-    clf = model.build(encoding, n_features=2, n_layers=2)
+    clf = model.build(encoding, n_features=2, L_var=2)
 
-    r = treinar(clf, ds, epocas=8, batch_size=20, lr=0.2, seed=42, verbose=False)
+    r = treinar(clf, ds, epocas=8, batch_size=20, eta=0.2, seed=42, verbose=False)
 
     assert r.historico["custo"].iloc[-1] < r.historico["custo"].iloc[0]
     assert r.meta["encoding"] == encoding
@@ -49,7 +49,7 @@ def test_todas_as_codificacoes_treinam(encoding):
 
 def test_historico_e_metadados_completos():
     ds = load_dataset("moons", n_samples=60, seed=42)
-    clf = model.build("angle", n_features=2, n_layers=2)
+    clf = model.build("angle", n_features=2, L_var=2)
 
     r = treinar(clf, ds, epocas=3, batch_size=20, seed=42, verbose=False)
 
@@ -64,7 +64,7 @@ def test_historico_e_metadados_completos():
 def test_meta_separa_p_do_circuito_dos_parametros_do_modelo():
     """O CSV precisa gravar os dois contadores: o texto fala em p = 12, não 13."""
     ds = load_dataset("moons", n_samples=60, seed=42)
-    clf = model.build("angle", n_features=2, n_layers=2)
+    clf = model.build("angle", n_features=2, L_var=2)
 
     r = treinar(clf, ds, epocas=1, seed=42, verbose=False)
 
@@ -75,7 +75,7 @@ def test_meta_separa_p_do_circuito_dos_parametros_do_modelo():
 def test_historico_nao_tem_coluna_de_teste():
     """O teste é usado uma vez, no fim — nunca época a época."""
     ds = load_dataset("moons", n_samples=60, seed=42)
-    clf = model.build("angle", n_features=2, n_layers=2)
+    clf = model.build("angle", n_features=2, L_var=2)
 
     r = treinar(clf, ds, epocas=3, batch_size=20, seed=42, verbose=False)
 
@@ -85,9 +85,9 @@ def test_historico_nao_tem_coluna_de_teste():
 def test_epoca_escolhida_e_a_de_maior_acc_val():
     """A validação escolhe a época; no empate fica a mais antiga."""
     ds = load_dataset("moons", n_samples=80, seed=42)
-    clf = model.build("angle", n_features=2, n_layers=2)
+    clf = model.build("angle", n_features=2, L_var=2)
 
-    r = treinar(clf, ds, epocas=8, batch_size=20, lr=0.2, seed=42, verbose=False)
+    r = treinar(clf, ds, epocas=8, batch_size=20, eta=0.2, seed=42, verbose=False)
     hist = r.historico
     melhor = hist.loc[hist["acc_val"].idxmax()]  # idxmax devolve o primeiro máximo
 
@@ -99,9 +99,9 @@ def test_epoca_escolhida_e_a_de_maior_acc_val():
 def test_parametros_devolvidos_sao_os_da_epoca_escolhida():
     """acc_treino, acc_val e acc_teste saem todos do mesmo modelo restaurado."""
     ds = load_dataset("moons", n_samples=80, seed=42)
-    clf = model.build("angle", n_features=2, n_layers=2)
+    clf = model.build("angle", n_features=2, L_var=2)
 
-    r = treinar(clf, ds, epocas=8, batch_size=20, lr=0.2, seed=42, verbose=False)
+    r = treinar(clf, ds, epocas=8, batch_size=20, eta=0.2, seed=42, verbose=False)
 
     def acc(X, y):
         return accuracy(y, model.prever(clf, r.weights, r.alpha, r.bias, X))

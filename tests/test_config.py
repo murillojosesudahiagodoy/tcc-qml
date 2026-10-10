@@ -11,8 +11,8 @@ from tccqml.data import load_dataset
 from tccqml.embeddings import ENCODINGS
 
 
-def test_n_samples_bate_com_a_secao_2_5_7():
-    """N = 300 é o que a Seção 2.5.7 declara — e tem que ser o que roda."""
+def test_n_samples_bate_com_a_secao_3_1():
+    """N = 300 é o que o Cap. 3 ("Conjuntos de dados") declara — e tem que ser o que roda."""
     assert PADRAO.n_samples == 300
 
 
@@ -38,9 +38,9 @@ def test_normalizacao_padrao_e_0_pi():
 
 
 def test_ansatz_congelado_no_protocolo():
-    """Seção 2.2.3.4: mesma camada, mesmo número de camadas, em tudo."""
+    """O ansatz congelado (Cap. 3, tab:protocolo): mesma camada, mesmo L_var, em tudo."""
     assert PADRAO.ansatz == "strongly_entangling"
-    assert PADRAO.n_layers == 2
+    assert PADRAO.L_var == 2
 
 
 def test_grade_so_referencia_codificacoes_registradas():

@@ -1,4 +1,4 @@
-encoding,dataset,seed,epoca,custo,acc_treino,acc_val,ansatz,L_reup,n_qubits,depth,gates_1q,gates_2q,gates_total,depth_encoding,gates_1q_encoding,gates_2q_encoding,gates_total_encoding,n_params_ansatz,n_params_encoding,n_params_circuito,aval_derivadas_amostra,aval_gradiente_amostra,n_aval_passo,n_shots_passo
+encoding,dataset,seed,epoca,custo,acc_treino,acc_val,ansatz,R,n_qubits,depth,gates_1q,gates_2q,gates_total,depth_encoding,gates_1q_encoding,gates_2q_encoding,gates_total_encoding,n_params_ansatz,n_params_encoding,n_params_circuito,aval_derivadas_amostra,aval_gradiente_amostra,n_aval_passo,n_shots_passo
 angle,xor,42,1,0.5697779182960763,0.8111111111111111,0.7666666666666667,strongly_entangling,,2,11,14,4,18,1,2,0,2,12,0,12,24,25,500,500000
 angle,xor,42,2,0.5494364307153116,0.8277777777777777,0.8833333333333333,strongly_entangling,,2,11,14,4,18,1,2,0,2,12,0,12,24,25,500,500000
 angle,xor,42,3,0.5402504153626287,0.8555555555555555,0.8333333333333334,strongly_entangling,,2,11,14,4,18,1,2,0,2,12,0,12,24,25,500,500000

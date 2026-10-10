@@ -1,6 +1,6 @@
-"""Codificações de dados clássicos em estados quânticos (Etapa 4).
+"""Codificações de dados clássicos em estados quânticos.
 
-Todas as codificações compartilham a mesma interface para que a Etapa 9 —
+Todas as codificações compartilham a mesma interface para que a comparação —
 trocar a codificação mantendo o resto fixo — seja uma troca de string.
 
 O contrato é o da dataclass ``Encoding``:
@@ -11,9 +11,9 @@ O contrato é o da dataclass ``Encoding``:
   (``None`` quando a codificação não recebe nenhum);
 - ``interleaved=True`` significa que ``apply`` monta o circuito INTEIRO
   (dados e camadas treináveis intercalados) e o ansatz não deve ser chamado
-  depois — é o caso do data re-uploading (Eq. 2.64);
+  depois — é o caso do data re-uploading (Cap. 2, "Data re-uploading");
 - ``apply_dados`` isola o bloco de dados, para medir a profundidade da
-  codificação separadamente da profundidade total (exigência da Etapa 9).
+  codificação separadamente da profundidade total (Cap. 3, "Métricas").
 
 Registrar uma codificação nova em ``ENCODINGS`` basta para ela aparecer na
 linha de comando e poder entrar na grade de experimentos — não há nenhuma
@@ -48,21 +48,21 @@ class Encoding:
 
 
 # --------------------------------------------------------------------------
-# 1. Angle encoding (Seção 2.4.3) — o classificador base da Etapa 8
+# 1. Angle encoding (Cap. 2, "Angle encoding") — o classificador de referência
 # --------------------------------------------------------------------------
 
 
 def angle_encoding(x, wires: Sequence[int], params=None, rotation: str = "Y") -> None:
     """Cada feature vira o ângulo de uma rotação: x_i -> R(x_i).
 
-    Um qubit por feature. Circuito raso: profundidade 1, nenhuma porta
-    de dois qubits. É o piso de custo contra o qual as outras comparam.
+    Um qubit por feature. Bloco de dados com profundidade 1 e nenhuma porta
+    de dois qubits.
     """
     qml.AngleEmbedding(x, wires=wires, rotation=rotation)
 
 
 # --------------------------------------------------------------------------
-# 2. Amplitude encoding (Seção 2.4.4)
+# 2. Amplitude encoding (Cap. 2, "Amplitude encoding")
 # --------------------------------------------------------------------------
 
 
@@ -73,13 +73,13 @@ def amplitude_encoding(x, wires: Sequence[int], params=None) -> None:
     consequência aparece em toda tabela: o StronglyEntanglingLayers sobre um
     qubit não gera nenhuma CNOT e o número de parâmetros cai de 12 para 6.
     Não é bug; é a codificação sendo o que ela é, e por isso `n_qubits` e `p`
-    são emitidos em toda linha de resultado (Seção 2.6.3).
+    são emitidos em toda linha de resultado.
 
     O vetor é normalizado antes de virar estado, o que descarta a norma de x:
-    dois pontos na mesma direção viram o MESMO estado (Seção 2.4.4.1). Como
+    dois pontos na mesma direção viram o MESMO estado, e x e -x diferem só
+    por fase global. Como
     `data.py` normaliza para [0, pi], todos os pontos caem no primeiro
-    quadrante e o ângulo entre dois vetores quaisquer fica em [0, pi/2] — a
-    geometria é comprimida por um motivo alheio à codificação. O diagnóstico
+    quadrante e o ângulo entre dois vetores quaisquer fica em [0, pi/2]. O diagnóstico
     (`diagnostico_amplitude`, em `experiments.py`) mede o efeito nas duas
     normalizações.
     """
@@ -91,64 +91,67 @@ def _qubits_amplitude(n_features: int) -> int:
 
 
 # --------------------------------------------------------------------------
-# 3. Data re-uploading (Seção 2.4.5, Eq. 2.64)
+# 3. Data re-uploading (Cap. 2, "Data re-uploading")
 # --------------------------------------------------------------------------
 
 
-def _reuploading_dados(x, wires: Sequence[int], params=None, L_reup: int = 3) -> None:
-    """Só os L blocos S(x), sem as camadas treináveis (medida de custo)."""
-    for _ in range(L_reup):
+def _reuploading_dados(x, wires: Sequence[int], params=None, R: int = 3) -> None:
+    """Só os R blocos S(x), sem as camadas treináveis (medida de custo)."""
+    for _ in range(R):
         angle_encoding(x, wires=wires)
 
 
-def make_reuploading(L_reup: int = 3) -> Encoding:
-    """Monta a codificação com re-uploading de `L_reup` blocos de dados.
+def make_reuploading(R: int = 3) -> Encoding:
+    """Monta a codificação com re-uploading de `R` blocos de dados.
 
-    Eq. 2.64:  U(x, theta) = W(theta_L) S(x) ... W(theta_1) S(x)
+    Cap. 2, "Data re-uploading":
+
+        U(x, theta) = W(theta_R) S(x) ... W(theta_1) S(x)
 
     Convenção deste trabalho, fixada aqui para não haver ambiguidade:
-    `L_reup` blocos de dados S(x) (cada um um angle encoding) intercalados com
-    `L_reup` camadas treináveis W(theta_l), cada W sendo UMA camada do
+    `R` blocos de dados S(x) (cada um um angle encoding) intercalados com
+    `R` camadas treináveis W(theta_l), cada W sendo UMA camada do
     StronglyEntanglingLayers. A ordem dentro de cada repetição é S(x) e depois
     W(theta_l).
 
-    `L_reup` é INDEPENDENTE do `n_layers` do ansatz: como esta codificação é
+    `R` é INDEPENDENTE do `L_var` do ansatz: como esta codificação é
     `interleaved`, o ansatz não é aplicado depois, e quem determina a forma dos
-    pesos é `params_shape`. Logo o modelo tem 3 * L_reup * n parâmetros.
+    pesos é `params_shape`. Logo o modelo tem 3 * R * n parâmetros.
     """
 
     def aplicar(x, wires: Sequence[int], params=None) -> None:
         if params is None:
             raise ValueError("re-uploading exige os pesos treináveis em params=")
         wires = list(wires)
-        for camada in range(L_reup):
+        for camada in range(R):
             angle_encoding(x, wires=wires)
             qml.StronglyEntanglingLayers(params[camada : camada + 1], wires=wires)
 
     def dados(x, wires: Sequence[int], params=None) -> None:
-        _reuploading_dados(x, wires, L_reup=L_reup)
+        _reuploading_dados(x, wires, R=R)
 
     return Encoding(
         name="reuploading",
         apply=aplicar,
         n_qubits=lambda n_features: n_features,
-        params_shape=lambda n_features: weights_shape(L_reup, n_features),
+        params_shape=lambda n_features: weights_shape(R, n_features),
         interleaved=True,
         descricao=(
-            f"dados reinseridos em {L_reup} blocos intercalados com camadas "
-            "treináveis (Eq. 2.64); espectro Omega = {-L,...,L}"
+            f"dados reinseridos em {R} blocos intercalados com camadas "
+            "treináveis; suporte Omega = {-R,...,R} por atributo, com R = "
+            f"{R}"
         ),
         apply_dados=dados,
     )
 
 
 # --------------------------------------------------------------------------
-# 4. Feature map entrelaçado ZZ (Seção 2.4.6, Eqs. 2.65-2.67)
+# 4. Feature map entrelaçado ZZ (Cap. 2, "Feature maps entrelaçados")
 # --------------------------------------------------------------------------
 
 
-def make_zz(r: int = 2) -> Encoding:
-    """Feature map entrelaçado, com `r` repetições (Eq. 2.66 usa r = 2).
+def make_zz(r_zz: int = 2) -> Encoding:
+    """Feature map entrelaçado, com `r_zz` repetições (padrão 2).
 
     Cada repetição é:
 
@@ -159,17 +162,17 @@ def make_zz(r: int = 2) -> Encoding:
     A Hadamard NÃO é decoração. O operador de fase é diagonal na base
     computacional, então sobre |0...0> ele só multiplica o estado por uma fase
     global: sem as Hadamards o circuito fica literalmente independente dos
-    dados e <Z_0> vale 1 para qualquer x (Seção 2.4.6). O teste
+    dados e <Z_0> vale 1 para qualquer x. O teste
     `test_zz_nao_e_inerte` existe por causa disso.
 
     É a única codificação do núcleo com portas de dois qubits no bloco de
-    dados: r * d * (d - 1) CNOTs, ou 4 para d = 2 e r = 2. A profundidade é
-    O(r d^2), porque os pares crescem com o quadrado da dimensão.
+    dados: r_zz * d * (d - 1) CNOTs, ou 4 para d = 2 e r_zz = 2. A profundidade é
+    O(r_zz d^2), porque os pares crescem com o quadrado da dimensão.
     """
 
     def aplicar(x, wires: Sequence[int], params=None) -> None:
         wires = list(wires)
-        for _ in range(r):
+        for _ in range(r_zz):
             for w in wires:
                 qml.Hadamard(wires=w)
             for i, w in enumerate(wires):
@@ -188,8 +191,8 @@ def make_zz(r: int = 2) -> Encoding:
         apply=aplicar,
         n_qubits=lambda n_features: n_features,
         descricao=(
-            f"feature map entrelaçado com r = {r} repetições (Eqs. 2.65-2.67); "
-            "único do núcleo com CNOTs no bloco de dados"
+            f"feature map entrelaçado com r_ZZ = {r_zz} repetições; "
+            "único dos implementados com CNOTs no bloco de dados (d = 2)"
         ),
     )
 
@@ -198,7 +201,7 @@ def make_zz(r: int = 2) -> Encoding:
 # Registro
 # --------------------------------------------------------------------------
 
-L_REUP_PADRAO = 3
+R_PADRAO = 3
 R_ZZ_PADRAO = 2
 
 ENCODINGS = {
@@ -206,15 +209,15 @@ ENCODINGS = {
         name="angle",
         apply=angle_encoding,
         n_qubits=lambda n_features: n_features,
-        descricao="um RY por atributo (Seção 2.4.3); piso de custo, Omega = {-1, 0, 1}",
+        descricao="um RY por atributo; bloco de profundidade 1, sem CNOTs; Omega = {-1, 0, 1}",
     ),
     "amplitude": Encoding(
         name="amplitude",
         apply=amplitude_encoding,
         n_qubits=_qubits_amplitude,
-        descricao="atributos nas amplitudes de ceil(log2 d) qubits (Seção 2.4.4); descarta a norma",
+        descricao="atributos nas amplitudes de ceil(log2 d) qubits; descarta a norma",
     ),
-    "reuploading": make_reuploading(L_REUP_PADRAO),
+    "reuploading": make_reuploading(R_PADRAO),
     "zz": make_zz(R_ZZ_PADRAO),
 }
 
@@ -228,7 +231,7 @@ _FABRICAS: dict[str, Callable[..., Encoding]] = {
 def get_encoding(name: str, **kwargs) -> Encoding:
     """Devolve a codificação registrada, opcionalmente reparametrizada.
 
-    >>> get_encoding("reuploading", L_reup=5).params_shape(2)
+    >>> get_encoding("reuploading", R=5).params_shape(2)
     (5, 2, 3)
     """
     if name not in ENCODINGS:

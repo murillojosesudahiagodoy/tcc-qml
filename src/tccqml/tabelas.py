@@ -1,15 +1,22 @@
-"""Geração das tabelas do Capítulo 4 — a Etapa 10 do roteiro.
+"""Geração das tabelas do Capítulo 4.
 
 Cada tabela sai em dois formatos: `.csv` (para conferir e reprocessar) e
 `.tex` (para colar no Overleaf sem editar nada). O `.tex` é um ambiente
-`table` completo, com legenda acima e linha de fonte abaixo, no padrão ABNT
-das Tabelas 2-5 que já estão no texto, e usa só `tabular` e `\\hline` — nenhum
-pacote novo precisa ser carregado.
+`table` completo, com legenda acima (e uma legenda curta para a Lista de
+Tabelas) e linha de fonte abaixo, no padrão ABNT das tabelas que já estão no
+texto. Usa `tabular` com as regras do `booktabs` (`\\toprule`, `\\midrule`,
+`\\bottomrule`), o mesmo estilo das tabelas do texto; o preâmbulo do TCC já
+carrega o pacote, e o `.tex` gerado não carrega nenhum.
 
-Nove das dez tabelas são DERIVADAS dos CSVs de `results/metrics/` e não
+Oito das nove tabelas são DERIVADAS dos CSVs de `results/metrics/` e não
 devem ser editadas à mão: se um número estiver estranho, o lugar de corrigir é
-o experimento, não a tabela. A décima (`tab_qualitativa`) é julgamento do autor
+o experimento, não a tabela. A nona (`tab_qualitativa`) é julgamento do autor
 e tem uma coluna que só se sabe depois de implementar.
+
+Todas cabem na largura útil de uma página A4 com as margens do abnTeX2: as
+que comparariam muitas colunas de "média ± desvio" lado a lado
+(`tab_mesmo_p`, `tab_sensibilidade`) saem em formato longo, um grupo de
+linhas por conjunto de dados.
 """
 
 from __future__ import annotations
@@ -23,7 +30,7 @@ from tccqml.espectro import ENCODINGS_COM_ESPECTRO
 
 FONTE = "Fonte: Elaborada pelo autor."
 
-# Ordem fixa nas tabelas: a da Etapa 9 do roteiro, que é também a ordem em que
+# Ordem fixa nas tabelas: a ordem em que
 # as codificações aparecem no Capítulo 2.
 ORDEM_ENCODINGS = ["angle", "amplitude", "reuploading", "zz"]
 ORDEM_DATASETS = ["xor", "moons", "circles"]
@@ -53,7 +60,7 @@ def _media_desvio(media: float, desvio: float) -> str:
 
 
 # Números pequenos vão por extenso na legenda, como manda a ABNT e como as
-# Tabelas 2-5 já escritas fazem. Acima de dez, algarismo.
+# tabelas já escritas no texto fazem. Acima de dez, algarismo.
 _POR_EXTENSO = {
     1: "uma", 2: "duas", 3: "três", 4: "quatro", 5: "cinco",
     6: "seis", 7: "sete", 8: "oito", 9: "nove", 10: "dez",
@@ -91,6 +98,8 @@ def to_latex(
     grupos: list[tuple[str, int]] | None = None,
     cabecalho: list[str] | None = None,
     preambulo: list[str] | None = None,
+    divisorias: list[int] | None = None,
+    caption_curta: str | None = None,
 ) -> str:
     """Um ambiente `table` completo, colável direto no Overleaf.
 
@@ -99,7 +108,10 @@ def to_latex(
     `cabecalho` troca os nomes das colunas só no `.tex` — o `.csv` mantém os
     de `df`, que precisam ser únicos —, o que permite repetir "Prof." em dois
     grupos. `preambulo` entra logo depois do `\\centering` (tamanho da fonte,
-    espaçamento entre colunas) e só vale dentro da tabela.
+    espaçamento entre colunas) e só vale dentro da tabela. `divisorias` lista
+    os índices das linhas do corpo depois das quais entra um `\\hline`, para
+    separar grupos numa tabela em formato longo. `caption_curta` é a legenda
+    que entra na Lista de Tabelas, como nas tabelas escritas à mão no texto.
     """
     alinhamento = alinhamento or "l" + "c" * (df.shape[1] - 1)
     nomes = cabecalho or [str(c) for c in df.columns]
@@ -113,28 +125,29 @@ def to_latex(
         for rotulo, n in grupos:
             if rotulo:
                 celulas.append(f"\\multicolumn{{{n}}}{{c}}{{{rotulo}}}")
-                regras.append(f"\\cline{{{inicio}-{inicio + n - 1}}}")
+                regras.append(f"\\cmidrule(lr){{{inicio}-{inicio + n - 1}}}")
             else:
                 celulas.extend([""] * n)
             inicio += n
         linhas_grupo = [" & ".join(celulas) + " \\\\", " ".join(regras)]
-    corpo = [
-        " & ".join("" if pd.isna(v) else str(v) for v in linha) + " \\\\"
-        for linha in df.itertuples(index=False)
-    ]
+    corpo = []
+    for i, linha in enumerate(df.itertuples(index=False)):
+        corpo.append(" & ".join("" if pd.isna(v) else str(v) for v in linha) + " \\\\")
+        if divisorias and i in divisorias:
+            corpo.append("\\midrule")
     partes = [
         "\\begin{table}[htb]",
         "\\centering",
         *(preambulo or []),
-        f"\\caption{{{caption}}}",
+        f"\\caption[{caption_curta}]{{{caption}}}" if caption_curta else f"\\caption{{{caption}}}",
         f"\\label{{{label}}}",
         f"\\begin{{tabular}}{{{alinhamento}}}",
-        "\\hline",
+        "\\toprule",
         *linhas_grupo,
         " & ".join(nomes) + " \\\\",
-        "\\hline",
+        "\\midrule",
         *corpo,
-        "\\hline",
+        "\\bottomrule",
         "\\end{tabular}",
     ]
     if nota:
@@ -191,6 +204,7 @@ def tab_acuracia(resumo: pd.DataFrame) -> tuple[pd.DataFrame, str]:
             f"(média $\\pm$ desvio padrão {sobre})."
         ),
         label="tab:acuracia",
+        caption_curta="Acurácia de teste por codificação e conjunto de dados",
         nota=_nota_recursos(resumo),
     )
     return tabela, tex
@@ -256,7 +270,7 @@ def _milhar(valor: int) -> str:
     return f"{int(valor):,}".replace(",", "\\,")
 
 
-# Contagens de portas que a Seção 3.8 promete, gravadas por `comparar` desde que
+# Contagens de portas que o Cap. 3 ("Métricas") promete, gravadas por `comparar` desde que
 # `COLUNAS_CUSTO` passou a incluí-las. Um `resumo.csv` anterior não as tem.
 _PORTAS = ("gates_total", "gates_1q_encoding", "gates_2q_encoding", "gates_total_encoding")
 
@@ -266,7 +280,7 @@ def _colunas_de_portas(custo: pd.DataFrame) -> pd.DataFrame:
 
     São estáticas: dependem só da arquitetura, não do treino. Quando o
     `resumo.csv` é anterior a essas colunas, cada circuito é montado de novo
-    com o protocolo da grade (`n_layers`, `L_reup`) e medido pela mesma
+    com o protocolo da grade (`L_var`, `R`) e medido pela mesma
     `stats()` que os runners usam — sem treino e sem número escrito à mão.
     """
     faltando = [c for c in _PORTAS if c not in custo.columns]
@@ -281,8 +295,8 @@ def _colunas_de_portas(custo: pd.DataFrame) -> pd.DataFrame:
         clf = model.build(
             encoding,
             n_features=2,
-            n_layers=PADRAO.n_layers,
-            enc_kwargs={"L_reup": PADRAO.L_reup} if encoding == "reuploading" else None,
+            L_var=PADRAO.L_var,
+            enc_kwargs={"R": PADRAO.R} if encoding == "reuploading" else None,
         )
         # A estrutura do circuito não depende do valor do dado, só da forma.
         medidas[encoding] = stats(clf, [0.3, 1.2])
@@ -295,11 +309,11 @@ def tab_custo(resumo: pd.DataFrame) -> tuple[pd.DataFrame, str]:
     """Recursos do bloco de codificação e do circuito completo, e custo por passo.
 
     O bloco de codificação e o circuito completo vêm em grupos separados
-    (Seção 3.8): profundidade, portas totais e portas de dois qubits de cada
+    (Cap. 3, "Métricas"): profundidade, portas totais e portas de dois qubits de cada
     um, mais os qubits do circuito. As contagens de hardware vêm em colunas
     separadas: avaliações do circuito (quantos circuitos distintos por passo)
     e shots (quantas execuções). As 2p avaliações deslocadas ficam ao lado
-    para comparação com a Eq. 2.47, mas o custo do gradiente é 2p + 1 por
+    para comparação com a regra de deslocamento, mas o custo do gradiente é 2p + 1 por
     amostra, por causa do resíduo.
     """
     colunas = ["n_qubits", "n_params_circuito", "depth", "depth_encoding", "gates_2q"]
@@ -347,6 +361,7 @@ def tab_custo(resumo: pd.DataFrame) -> tuple[pd.DataFrame, str]:
             "decomposto nas portas básicas."
         ),
         label="tab:custo",
+        caption_curta="Custo de circuito por codificação",
         grupos=[
             ("", 2),
             ("Bloco de codificação", 3),
@@ -386,56 +401,21 @@ def tab_custo(resumo: pd.DataFrame) -> tuple[pd.DataFrame, str]:
 
 
 # --------------------------------------------------------------------------
-# tab_convergencia — qual treinou mais rápido
-# --------------------------------------------------------------------------
-
-
-def tab_convergencia(resumo: pd.DataFrame) -> tuple[pd.DataFrame, str]:
-    """Época em que a acurácia de treino atinge 90% do seu valor final.
-
-    Mede velocidade, não qualidade: um modelo ruim pode convergir depressa para
-    o seu próprio teto baixo, e é por isso que a coluna de custo final vem ao
-    lado.
-    """
-    resumo = _ordenar(resumo, "encoding", ORDEM_ENCODINGS)
-    tabela = pd.DataFrame({"Codificação": [_rotulo(e) for e in resumo["encoding"].unique()]})
-    for dataset in [d for d in ORDEM_DATASETS if d in set(resumo["dataset"])]:
-        fatia = resumo[resumo["dataset"] == dataset].set_index("encoding")
-        tabela[_rotulo(dataset)] = [
-            _dec(fatia.loc[e, "epoca_90pct_mean"], 1) if e in fatia.index else ""
-            for e in resumo["encoding"].unique()
-        ]
-    fatia_custo = resumo.groupby("encoding")["custo_final_mean"].mean()
-    tabela["Custo final médio"] = [
-        _dec(fatia_custo.get(e, float("nan"))) for e in resumo["encoding"].unique()
-    ]
-    tex = to_latex(
-        tabela,
-        caption=(
-            "Velocidade de convergência: primeira época em que a acurácia de "
-            "treino atinge 90\\% do seu valor final (média sobre as sementes)."
-        ),
-        label="tab:convergencia",
-    )
-    return tabela, tex
-
-
-# --------------------------------------------------------------------------
 # tab_espectro — frequências medidas contra as previstas
 # --------------------------------------------------------------------------
 
 
 def tab_espectro(espectro: pd.DataFrame) -> tuple[pd.DataFrame, str]:
-    """Omega medido por FFT 2D contra o limite da Tabela 5 (p. 52).
+    """Omega medido por FFT 2D contra o suporte previsto (tab:espectros, Cap. 2).
 
     O omega vai POR ATRIBUTO: o máximo entre os dois coincidiria com o previsto
-    e esconderia que x_1 para em L - 1. Os termos são CONTADOS na FFT 2D, e
+    e esconderia que x_1 para em R - 1. Os termos são CONTADOS na FFT 2D, e
     não calculados como (2 omega_max + 1)^d.
     """
     tabela = pd.DataFrame(
         {
             "Codificação": [
-                _rotulo(r.encoding) + ("" if pd.isna(r.L_reup) else f" ($R = {int(r.L_reup)}$)")
+                _rotulo(r.encoding) + ("" if pd.isna(r.R) else f" ($R = {int(r.R)}$)")
                 for r in espectro.itertuples()
             ],
             "$\\omega_{\\max}$ previsto": espectro["omega_max_previsto"].astype(int).values,
@@ -454,6 +434,18 @@ def tab_espectro(espectro: pd.DataFrame) -> tuple[pd.DataFrame, str]:
             "Tabela~\\ref{tab:espectros}, com $d = 2$ atributos."
         ),
         label="tab:espectro",
+        caption_curta="Espectro de Fourier medido",
+        cabecalho=[
+            "Codificação",
+            "\\shortstack{$\\omega_{\\max}$\\\\previsto}",
+            "\\shortstack{$\\omega_{\\max}$\\\\em $x_1$}",
+            "\\shortstack{$\\omega_{\\max}$\\\\em $x_2$}",
+            "\\shortstack{Termos\\\\previstos}",
+            "\\shortstack{Termos\\\\medidos}",
+            "Cruzados",
+            "$p$",
+        ],
+        preambulo=["\\small", "\\setlength{\\tabcolsep}{4pt}"],
         nota=(
             "A teoria dá um limite superior: nenhuma energia aparece fora de "
             "$\\{-R, \\dots, R\\}^d$, mas nem todos os termos permitidos aparecem. "
@@ -475,8 +467,9 @@ def tab_espectro(espectro: pd.DataFrame) -> tuple[pd.DataFrame, str]:
 def tab_ablacao(ablacao: pd.DataFrame) -> tuple[pd.DataFrame, str]:
     """Acurácia de teste com e sem CNOTs no ansatz, por conjunto de dados.
 
-    Os três conjuntos aparecem porque a queda não é específica do XOR: sem
-    CNOTs, <Z_0> só enxerga x_1 (Eq. 2.83), e qualquer conjunto que precise de
+    Os três conjuntos aparecem porque a queda não é específica do xor: sem
+    CNOTs, <Z_0> só enxerga x_1 (Cap. 2, "Entrelaçamento e termos cruzados"), e
+    qualquer conjunto que precise de
     x_2 cai.
     """
     agregado = ablacao.groupby(["dataset", "ansatz"])["acc_teste"].agg(["mean", "std"])
@@ -495,6 +488,7 @@ def tab_ablacao(ablacao: pd.DataFrame) -> tuple[pd.DataFrame, str]:
             "no \\textit{ansatz} (mesmo $p$)."
         ),
         label="tab:ablacao",
+        caption_curta="Ablação do entrelaçamento no \\textit{angle}",
     )
     return tabela, tex
 
@@ -532,6 +526,7 @@ def tab_diagnostico(diagnostico: pd.DataFrame) -> tuple[pd.DataFrame, str]:
         tabela,
         caption="Acurácia de teste do \\textit{amplitude} com duas normalizações dos dados.",
         label="tab:diagnostico",
+        caption_curta="Normalização dos dados no \\textit{amplitude}",
     )
     return tabela, tex
 
@@ -542,29 +537,40 @@ def tab_diagnostico(diagnostico: pd.DataFrame) -> tuple[pd.DataFrame, str]:
 
 
 def tab_mesmo_p(
-    varredura_L: pd.DataFrame, varredura_camadas: pd.DataFrame
+    varredura_R: pd.DataFrame, varredura_L_var: pd.DataFrame
 ) -> tuple[pd.DataFrame, str]:
-    """Re-uploading com L blocos contra angle com L camadas: mesmo p.
+    """Re-uploading com R = k repetições contra angle com L_var = k camadas: mesmo p.
 
-    Com dois qubits os dois modelos têm p = 6L. O que muda é o espectro: o
-    angle fica em Omega = {-1, 0, 1} por atributo, o re-uploading vai até L.
+    Com dois qubits os dois modelos têm p = 6k. O que muda é o suporte: o
+    angle fica em Omega = {-1, 0, 1} por atributo, o re-uploading vai até R.
+    Formato longo, um grupo de linhas por conjunto: seis colunas de
+    "média ± desvio" lado a lado não cabem na página.
     """
-    reup = varredura_L.groupby(["L_reup", "dataset"])["acc_teste"].agg(["mean", "std"])
-    angle = varredura_camadas.groupby(["n_layers", "dataset"])["acc_teste"].agg(["mean", "std"])
-    p_reup = varredura_L.groupby("L_reup")["n_params_circuito"].first()
-    p_angle = varredura_camadas.groupby("n_layers")["n_params_circuito"].first()
+    reup = varredura_R.groupby(["R", "dataset"])["acc_teste"].agg(["mean", "std"])
+    angle = varredura_L_var.groupby(["L_var", "dataset"])["acc_teste"].agg(["mean", "std"])
+    p_reup = varredura_R.groupby("R")["n_params_circuito"].first()
+    p_angle = varredura_L_var.groupby("L_var")["n_params_circuito"].first()
     valores = sorted(set(p_reup.index.astype(int)) & set(p_angle.index.astype(int)))
-    datasets = [d for d in ORDEM_DATASETS if d in set(varredura_L["dataset"])]
-
-    linhas = []
+    datasets = [d for d in ORDEM_DATASETS if d in set(varredura_R["dataset"])]
     for k in valores:
         if int(p_reup.loc[k]) != int(p_angle.loc[k]):
             raise ValueError(f"p diferente para k = {k}: a comparação deixa de ser de mesmo p")
-        linha = {"$k$": k, "$p$": int(p_reup.loc[k])}
-        for dataset in datasets:
-            linha[f"{_rotulo(dataset)} (\\textit{{angle}})"] = _media_desvio(*angle.loc[(k, dataset)])
-            linha[f"{_rotulo(dataset)} (\\textit{{re-up.}})"] = _media_desvio(*reup.loc[(k, dataset)])
-        linhas.append(linha)
+
+    linhas, divisorias = [], []
+    for dataset in datasets:
+        for posicao, k in enumerate(valores):
+            linhas.append(
+                {
+                    "Conjunto": _rotulo(dataset) if posicao == 0 else "",
+                    "$k$": k,
+                    "$p$": int(p_reup.loc[k]),
+                    "\\textit{Angle} ($L_\\text{var} = k$)": _media_desvio(
+                        *angle.loc[(k, dataset)]
+                    ),
+                    "\\textit{Re-uploading} ($R = k$)": _media_desvio(*reup.loc[(k, dataset)]),
+                }
+            )
+        divisorias.append(len(linhas) - 1)
     tabela = pd.DataFrame(linhas)
     tex = to_latex(
         tabela,
@@ -574,57 +580,62 @@ def tab_mesmo_p(
             "mesmo $p$, espectros diferentes."
         ),
         label="tab:mesmo-p",
+        caption_curta="\\textit{Angle} e \\textit{re-uploading} com o mesmo número de parâmetros",
+        alinhamento="lcccc",
+        divisorias=divisorias[:-1],
         nota=(
             "Com $k = 1$, os dois modelos são o mesmo circuito (uma codificação seguida "
             "de uma camada treinável), e as colunas coincidem."
         ),
-        alinhamento="cc" + "c" * (2 * len(datasets)),
     )
     return tabela, tex
 
 
 # --------------------------------------------------------------------------
-# tab_sensibilidade — a codificação estava bem treinada com o lr comum?
+# tab_sensibilidade — a codificação estava bem treinada com o eta comum?
 # --------------------------------------------------------------------------
 
 
-def _lr(valor: float) -> str:
+def _eta(valor: float) -> str:
     return f"{float(valor):g}".replace(".", ",")
 
 
 def tab_sensibilidade(
     resumo: pd.DataFrame, candidatos: list[float] | None = None
 ) -> tuple[pd.DataFrame, str]:
-    """Acurácia de teste no lr do protocolo contra a do lr escolhido.
+    """Acurácia de teste com o eta do protocolo e com o eta escolhido.
 
-    Uma linha por codificação; por conjunto, duas colunas. O lr escolhido sai
-    de `resumo_sensibilidade_lr.csv`, onde foi escolhido pela VALIDAÇÃO: o
-    teste aqui só mede o lr já escolhido. Se as duas colunas diferem menos que
-    o desvio, a codificação não estava limitada pela taxa de aprendizado.
+    Formato longo: um grupo de linhas por conjunto, uma linha por codificação.
+    O eta escolhido sai de `resumo_sensibilidade_eta.csv`, onde foi escolhido
+    pela VALIDAÇÃO: o teste aqui só mede o eta já escolhido. Se as duas
+    colunas diferem menos que o desvio, a codificação não estava limitada pela
+    taxa de aprendizado.
     """
     resumo = _ordenar(resumo, "encoding", ORDEM_ENCODINGS)
     encodings = list(resumo["encoding"].unique())
-    tabela = pd.DataFrame({"Codificação": [_rotulo(e) for e in encodings]})
+    eta_protocolo = _eta(resumo["eta_protocolo"].iloc[0])
+    linhas, divisorias = [], []
     for dataset in [d for d in ORDEM_DATASETS if d in set(resumo["dataset"])]:
         fatia = resumo[resumo["dataset"] == dataset].set_index("encoding")
-        protocolo, escolhido = [], []
-        for e in encodings:
-            if e not in fatia.index:
-                protocolo.append("")
-                escolhido.append("")
-                continue
+        presentes = [e for e in encodings if e in fatia.index]
+        for posicao, e in enumerate(presentes):
             linha = fatia.loc[e]
-            protocolo.append(
-                _media_desvio(linha["acc_teste_mean_protocolo"], linha["acc_teste_std_protocolo"])
+            linhas.append(
+                {
+                    "Conjunto": _rotulo(dataset) if posicao == 0 else "",
+                    "Codificação": _rotulo(e),
+                    "$\\eta$ escolhido": _eta(linha["eta_escolhido"]),
+                    f"Teste, $\\eta = {eta_protocolo.replace(',', '{,}')}$": _media_desvio(
+                        linha["acc_teste_mean_protocolo"], linha["acc_teste_std_protocolo"]
+                    ),
+                    "Teste, $\\eta$ escolhido": _media_desvio(
+                        linha["acc_teste_mean_escolhido"], linha["acc_teste_std_escolhido"]
+                    ),
+                }
             )
-            escolhido.append(
-                _media_desvio(linha["acc_teste_mean_escolhido"], linha["acc_teste_std_escolhido"])
-                + f" ({_lr(linha['lr_escolhido'])})"
-            )
-        tabela[f"{_rotulo(dataset)} (protocolo)"] = protocolo
-        tabela[f"{_rotulo(dataset)} (escolhido)"] = escolhido
+        divisorias.append(len(linhas) - 1)
+    tabela = pd.DataFrame(linhas)
 
-    lr_protocolo = _lr(resumo["lr_protocolo"].iloc[0])
     n = _n_sementes(resumo.rename(columns={"n_sementes": "acc_teste_count"}))
     if n is None:
         sobre = "sobre as sementes"
@@ -632,16 +643,19 @@ def tab_sensibilidade(
         sobre = "sobre uma semente"
     else:
         sobre = f"sobre {_POR_EXTENSO.get(n, n)} sementes"
-    lista = " entre " + ", ".join(_lr(c) for c in sorted(candidatos)) if candidatos else ""
+    lista = " entre " + ", ".join(_eta(c) for c in sorted(candidatos)) if candidatos else ""
     tex = to_latex(
         tabela,
         caption=(
             "Sensibilidade à taxa de aprendizado: acurácia de teste com o $\\eta$ do "
-            f"protocolo ({lr_protocolo}) e com o $\\eta$ escolhido{lista} (entre "
-            "parênteses) pela maior acurácia média de validação "
+            f"protocolo ({eta_protocolo}) e com o $\\eta$ escolhido{lista} "
+            "pela maior acurácia média de validação "
             f"(média $\\pm$ desvio padrão {sobre})."
         ),
         label="tab:sensibilidade",
+        caption_curta="Sensibilidade à taxa de aprendizado",
+        alinhamento="llccc",
+        divisorias=divisorias[:-1],
         nota=(
             "A escolha de $\\eta$ usa só a validação; o conjunto de teste não "
             "participa dela. Empate na validação: fica o $\\eta$ do protocolo, se "
@@ -674,7 +688,8 @@ def tab_verificacoes(controle: pd.DataFrame, limiar: pd.DataFrame) -> tuple[pd.D
         }
     ]
     por_versao = limiar.groupby("versao")
-    for versao, rotulo in (("sem_ruido", "$g/2 > t$, sem ruído"), ("com_ruido", "$g/2 > t$, com ruído")):
+    versoes = (("sem_ruido", "$g/2 > t$, sem ruído"), ("com_ruido", "$g/2 > t$, com ruído"))
+    for versao, rotulo in versoes:
         if versao not in por_versao.groups:
             continue
         fatia = por_versao.get_group(versao)
@@ -696,6 +711,7 @@ def tab_verificacoes(controle: pd.DataFrame, limiar: pd.DataFrame) -> tuple[pd.D
             f"(média $\\pm$ desvio padrão {sobre})."
         ),
         label="tab:verificacoes",
+        caption_curta="Verificações independentes do treinamento quântico",
         nota=(
             "Coordenadas já normalizadas para $[0, \\pi]$, com as mesmas partições e "
             "sementes da comparação principal. A regressão logística tem "
@@ -712,7 +728,7 @@ def tab_verificacoes(controle: pd.DataFrame, limiar: pd.DataFrame) -> tuple[pd.D
 # tab_qualitativa — a única preenchida à mão
 # --------------------------------------------------------------------------
 
-# A Tabela 4 (p. 46) do texto já traz forte/fraco. O que falta é a coluna de
+# Pontos fortes e fracos de cada codificação implementada, mais a coluna de
 # dificuldade de implementação, que só se sabe depois de implementar — e é
 # julgamento do autor, não medição. Os valores abaixo registram a experiência
 # desta implementação; revise-os antes de colar no texto.
@@ -758,7 +774,7 @@ QUALITATIVA = [
 
 
 def tab_qualitativa() -> tuple[pd.DataFrame, str]:
-    """Tabela 4 do texto acrescida da coluna de dificuldade de implementação."""
+    """Pontos fortes e fracos, com a dificuldade de implementação observada."""
     tabela = pd.DataFrame(QUALITATIVA)
     tabela["Codificação"] = tabela["Codificação"].map(_rotulo)
     tex = to_latex(
@@ -769,6 +785,7 @@ def tab_qualitativa() -> tuple[pd.DataFrame, str]:
             "dificuldade de implementação observada neste trabalho."
         ),
         label="tab:qualitativa",
+        caption_curta="Comparação qualitativa das codificações implementadas",
         alinhamento="lp{4.2cm}p{4.2cm}c",
     )
     return tabela, tex
@@ -801,7 +818,6 @@ def gerar_todas(out: str | Path = "results", verbose: bool = True) -> list[Path]
         for nome, (df, tex) in {
             "tab_acuracia": tab_acuracia(resumo),
             "tab_custo": tab_custo(resumo),
-            "tab_convergencia": tab_convergencia(resumo),
         }.items():
             gerados.append(_escrever(df, tex, nome, destino))
 
@@ -820,17 +836,17 @@ def gerar_todas(out: str | Path = "results", verbose: bool = True) -> list[Path]
         df, tex = tab_diagnostico(diagnostico)
         gerados.append(_escrever(df, tex, "tab_diagnostico", destino))
 
-    varredura_L = _ler("varredura_L.csv")
-    varredura_camadas = _ler("varredura_camadas.csv")
-    if varredura_L is not None and varredura_camadas is not None:
-        df, tex = tab_mesmo_p(varredura_L, varredura_camadas)
+    varredura_R = _ler("varredura_R.csv")
+    varredura_L_var = _ler("varredura_L_var.csv")
+    if varredura_R is not None and varredura_L_var is not None:
+        df, tex = tab_mesmo_p(varredura_R, varredura_L_var)
         gerados.append(_escrever(df, tex, "tab_mesmo_p", destino))
 
-    sensibilidade = _ler("resumo_sensibilidade_lr.csv")
+    sensibilidade = _ler("resumo_sensibilidade_eta.csv")
     if sensibilidade is not None:
-        por_treino = metrics / "sensibilidade_lr.csv"
+        por_treino = metrics / "sensibilidade_eta.csv"
         candidatos = (
-            sorted(pd.read_csv(por_treino)["lr"].unique()) if por_treino.exists() else None
+            sorted(pd.read_csv(por_treino)["eta"].unique()) if por_treino.exists() else None
         )
         df, tex = tab_sensibilidade(sensibilidade, candidatos)
         gerados.append(_escrever(df, tex, "tab_sensibilidade", destino))

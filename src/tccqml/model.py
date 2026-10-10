@@ -1,10 +1,10 @@
-"""Classificador quântico variacional (Etapas 3 e 8).
+"""Classificador quântico variacional.
 
-Monta a cadeia do roteiro:
+Monta a cadeia do Cap. 2:
 
     x -> psi(x) -> U(theta) psi(x) -> <Z_0> -> y_chapeu
 
-A montagem é genérica o bastante para as quatro codificações da Etapa 9: as
+A montagem é genérica o bastante para as quatro codificações implementadas: as
 que preparam o estado e depois entregam ao ansatz (angle, amplitude, zz) e a
 que intercala dados e camadas treináveis (re-uploading, `interleaved=True`).
 """
@@ -26,7 +26,7 @@ class Classificador:
     circuit: object
     encoding: str
     n_qubits: int
-    n_layers: int
+    L_var: int
     weights_shape: tuple
     ansatz: str = "strongly_entangling"
     alpha_shape: tuple | None = None
@@ -49,7 +49,7 @@ class Classificador:
 
     @property
     def n_params_circuito(self) -> int:
-        """O `p` das Tabelas 2 e 3 e das Eqs. 2.47/2.48: só o circuito."""
+        """O `p` do texto e das contagens de custo: só o circuito, sem o viés."""
         return self.n_params_ansatz + self.n_params_encoding
 
     @property
@@ -57,8 +57,8 @@ class Classificador:
         """Parâmetros treináveis do modelo, incluindo o viés clássico.
 
         NÃO é o `p` das fórmulas de custo. O viés é somado depois da medição e
-        sua derivada é clássica, sem executar o circuito (Seção 2.2.3.3), então
-        ele não entra nem na Eq. 2.47 nem na Eq. 2.48. Para isso use
+        sua derivada é clássica, sem executar o circuito, então ele não entra
+        nas contagens do parameter-shift. Para isso use
         `n_params_circuito`.
         """
         return self.n_params_circuito + 1
@@ -67,14 +67,14 @@ class Classificador:
 def build(
     encoding: str,
     n_features: int,
-    n_layers: int = 2,
+    L_var: int = 2,
     ansatz: str = "strongly_entangling",
     device: str = "default.qubit",
     enc_kwargs: dict | None = None,
 ) -> Classificador:
     """Constrói o QNode que devolve <Z_0> em [-1, 1].
 
-    `ansatz` só deve sair do padrão na ablação da Previsão 3 — nos experimentos
+    `ansatz` só deve sair do padrão na ablação da hipótese H3 — nos experimentos
     principais ele fica congelado em `strongly_entangling`.
     """
     enc_kwargs = dict(enc_kwargs or {})
@@ -89,7 +89,7 @@ def build(
         w_shape = tuple(enc.params_shape(n_features))
         alpha_shape = None
     else:
-        w_shape = tuple(ans.weights_shape(n_layers, n_qubits))
+        w_shape = tuple(ans.weights_shape(L_var, n_qubits))
         alpha_shape = (
             tuple(enc.params_shape(n_features)) if enc.params_shape is not None else None
         )
@@ -107,7 +107,7 @@ def build(
         circuit=circuit,
         encoding=encoding,
         n_qubits=n_qubits,
-        n_layers=n_layers,
+        L_var=L_var,
         weights_shape=w_shape,
         ansatz=ansatz,
         alpha_shape=alpha_shape,
@@ -122,11 +122,11 @@ def pesos_iniciais(clf: Classificador, seed: int = 42):
     `alpha` é None quando a codificação não tem parâmetros próprios, que é o
     caso das quatro codificações do núcleo.
     """
-    w = init_weights(clf.n_layers, clf.n_qubits, seed=seed, forma=clf.weights_shape)
+    w = init_weights(clf.L_var, clf.n_qubits, seed=seed, forma=clf.weights_shape)
     alpha = (
         None
         if clf.alpha_shape is None
-        else init_weights(clf.n_layers, clf.n_qubits, seed=seed + 1, forma=clf.alpha_shape)
+        else init_weights(clf.L_var, clf.n_qubits, seed=seed + 1, forma=clf.alpha_shape)
     )
     b = pnp.array(0.0, requires_grad=True)
     return w, alpha, b
@@ -138,6 +138,10 @@ def saida_continua(clf: Classificador, weights, alpha, bias, X):
 
 
 def prever(clf: Classificador, weights, alpha, bias, X):
-    """Converte a saída contínua em rótulo {0, 1}."""
+    """Converte a saída contínua em rótulo {0, 1}: 1 se f(x) + b > 0.
+
+    É a regra de decisão do texto em rótulos {0, 1} em vez de {-1, +1}:
+    f(x) + b = 0 cai na classe 0, como o "caso contrário" do texto.
+    """
     z = np.asarray(saida_continua(clf, weights, alpha, bias, X), dtype=float)
     return (z > 0).astype(int)

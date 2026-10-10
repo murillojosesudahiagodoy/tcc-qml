@@ -102,16 +102,16 @@ def test_cli_treinar_salvar_grava_pesos_que_reproduzem_o_teste(tmp_path):
     pesos = np.load(tmp_path / "weights" / f"{nome}.npz")
 
     ds = load_dataset("moons", n_samples=60, seed=42)
-    clf = model.build("reuploading", n_features=2, enc_kwargs={"L_reup": 3})
+    clf = model.build("reuploading", n_features=2, enc_kwargs={"R": 3})
     alpha = pesos["alpha"] if "alpha" in pesos.files else None
     previsto = model.prever(clf, pesos["weights"], alpha, float(pesos["bias"]), ds.X_test)
     assert accuracy(ds.y_test, previsto) == pytest.approx(resumo["acc_teste"])
     assert resumo["epoca_escolhida"] >= 1
 
-    # Um lr fora do protocolo ganha sufixo e não sobrescreve o treino anterior.
-    cli.main(base + ["--lr", "0.03"])
+    # Um eta fora do protocolo ganha sufixo e não sobrescreve o treino anterior.
+    cli.main(base + ["--eta", "0.03"])
     assert (tmp_path / "weights" / f"{nome}.npz").exists()
-    assert (tmp_path / "weights" / "treino_reuploading_moons_42_lr0.03_ep2_n60.npz").exists()
+    assert (tmp_path / "weights" / "treino_reuploading_moons_42_eta0.03_ep2_n60.npz").exists()
 
 
 def test_latex_e_um_ambiente_table_completo():
@@ -125,14 +125,32 @@ def test_latex_e_um_ambiente_table_completo():
         assert pedaco in tex
 
 
-def test_latex_nao_exige_pacote_novo():
-    """Só tabular e hline: nada de booktabs, que o preâmbulo pode não ter."""
+def test_latex_usa_booktabs_sem_carregar_pacote():
+    """Regras do booktabs, como as tabelas do texto; nenhum \\usepackage no .tex."""
     df = pd.DataFrame({"A": [1], "B": [2]})
 
     tex = to_latex(df, caption="x", label="tab:x")
 
-    for proibido in ("\\toprule", "\\midrule", "\\bottomrule", "\\usepackage"):
-        assert proibido not in tex
+    for regra in ("\\toprule", "\\midrule", "\\bottomrule"):
+        assert regra in tex
+    assert "\\hline" not in tex and "\\usepackage" not in tex
+
+
+def test_latex_com_legenda_curta_para_a_lista_de_tabelas():
+    df = pd.DataFrame({"A": [1], "B": [2]})
+
+    tex = to_latex(df, caption="Legenda longa.", label="tab:x", caption_curta="Curta")
+
+    assert "\\caption[Curta]{Legenda longa.}" in tex
+
+
+def test_latex_grupos_usam_cmidrule_lr():
+    """`(lr)` é a opção do booktabs que encurta a regra dos dois lados, não a taxa."""
+    df = pd.DataFrame({"A": [1], "B": [2], "C": [3]})
+
+    tex = to_latex(df, caption="x", label="tab:x", grupos=[("", 1), ("Grupo", 2)])
+
+    assert "\\cmidrule(lr){2-3}" in tex
 
 
 def test_tab_acuracia_sai_do_resumo(resumo_falso):
@@ -226,7 +244,7 @@ def test_tab_custo_recalcula_contagens_de_um_resumo_antigo(resumo_falso):
 
 
 def test_tab_ablacao_tem_uma_coluna_por_conjunto():
-    """A ablação roda nos três conjuntos: a queda não é só do XOR."""
+    """A ablação roda nos três conjuntos: a queda não é só do xor."""
     ablacao = pd.DataFrame(
         [
             {"dataset": d, "ansatz": a, "seed": s, "acc_teste": v}
@@ -273,11 +291,11 @@ def test_tab_mesmo_p_recusa_p_diferente():
             ]
         )
 
-    tabela, _ = tab_mesmo_p(varredura("L_reup", {1: 6, 2: 12}), varredura("n_layers", {1: 6, 2: 12}))
+    tabela, _ = tab_mesmo_p(varredura("R", {1: 6, 2: 12}), varredura("L_var", {1: 6, 2: 12}))
     assert list(tabela["$p$"]) == [6, 12]
 
     with pytest.raises(ValueError, match="p diferente"):
-        tab_mesmo_p(varredura("L_reup", {1: 6}), varredura("n_layers", {1: 7}))
+        tab_mesmo_p(varredura("R", {1: 6}), varredura("L_var", {1: 7}))
 
 
 def test_tab_qualitativa_cobre_as_quatro_codificacoes():
@@ -299,3 +317,13 @@ def test_figuras_tem_os_nomes_que_o_latex_espera(tmp_path):
     assert {"datasets.pdf", "espectro-reuploading.pdf"} <= nomes
     for caminho in gerados:
         assert caminho.exists() and caminho.stat().st_size > 0
+
+
+def test_figuras_sao_reproduziveis_byte_a_byte(tmp_path):
+    """Regenerar sem mudança de conteúdo não pode mudar o PDF (sem data embutida)."""
+    from tccqml.figuras import gerar_todas
+
+    primeira = {p.name: p.read_bytes() for p in gerar_todas(out=tmp_path / "a", verbose=False)}
+    segunda = {p.name: p.read_bytes() for p in gerar_todas(out=tmp_path / "b", verbose=False)}
+
+    assert primeira and primeira == segunda

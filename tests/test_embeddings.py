@@ -1,4 +1,4 @@
-"""Testes das codificações (Etapa 4 / Etapa 9)."""
+"""Testes das codificações."""
 
 import numpy as np
 import pennylane as qml
@@ -46,7 +46,7 @@ def test_angle_usa_um_qubit_por_feature():
 
 
 def test_amplitude_usa_log2_qubits():
-    """ceil(log2 d): 1 qubit para 2 atributos, 2 para 4 (Seção 2.4.4)."""
+    """ceil(log2 d): 1 qubit para 2 atributos, 2 para 4 (Cap. 2, "Amplitude encoding")."""
     enc = get_encoding("amplitude")
     assert enc.n_qubits(2) == 1
     assert enc.n_qubits(4) == 2
@@ -60,11 +60,11 @@ def test_codificacao_desconhecida_falha():
 
 def test_codificacao_sem_parametros_recusa_kwargs():
     with pytest.raises(ValueError, match="não aceita parâmetros"):
-        get_encoding("angle", L_reup=3)
+        get_encoding("angle", R=3)
 
 
 def test_registro_tem_interface_uniforme():
-    """A Etapa 9 depende disso: toda codificação com a mesma assinatura."""
+    """A comparação depende disso: toda codificação com a mesma assinatura."""
     for nome, enc in ENCODINGS.items():
         assert enc.name == nome
         assert callable(enc.apply)
@@ -103,7 +103,7 @@ def test_entradas_distintas_geram_saidas_distintas(encoding):
 
     No caso do ZZ isto é mais que higiene: o operador de fase é diagonal e,
     sem as Hadamards, o circuito fica literalmente independente dos dados sem
-    lançar erro nenhum (Seção 2.4.6).
+    lançar erro nenhum (Cap. 2, "Feature maps entrelaçados").
     """
     enc = get_encoding(encoding)
     n_qubits = enc.n_qubits(2)
@@ -145,7 +145,7 @@ def test_angle_e_raso_e_sem_portas_de_dois_qubits():
 
 
 def test_amplitude_descarta_a_norma():
-    """k(x, cx) = 1 para todo c > 0: só a DIREÇÃO sobrevive (Seção 2.4.4.1).
+    """k(x, cx) = 1 para todo c > 0: só a DIREÇÃO sobrevive (Cap. 2, "Amplitude encoding").
 
     É a razão pela qual a normalização dos dados interage com esta codificação
     e precisa do diagnóstico de normalização — dois pontos distantes em norma viram
@@ -163,7 +163,7 @@ def test_amplitude_descarta_a_norma():
 
 
 def test_reuploading_e_interleaved_e_dita_a_forma_dos_pesos():
-    enc = get_encoding("reuploading", L_reup=4)
+    enc = get_encoding("reuploading", R=4)
 
     assert enc.interleaved
     assert tuple(enc.params_shape(2)) == (4, 2, 3)
@@ -189,7 +189,7 @@ def test_reuploading_sem_pesos_falha_alto():
 
 
 def test_zz_sem_hadamard_seria_inerte():
-    """A armadilha da Seção 2.4.6, demonstrada.
+    """A armadilha do Cap. 2 ("Feature maps entrelaçados"), demonstrada.
 
     O operador de fase do ZZ é diagonal na base computacional: sobre |0...0>
     ele só produz uma fase global. Este teste constrói o feature map SEM as
@@ -216,8 +216,8 @@ def test_zz_sem_hadamard_seria_inerte():
 
 
 def test_zz_tem_o_numero_de_cnots_previsto():
-    """r * d * (d - 1) = 4 CNOTs para d = 2 e r = 2 (Eq. 2.66)."""
-    enc = get_encoding("zz", r=2)
+    """r_ZZ * d * (d - 1) = 4 CNOTs para d = 2 e r_ZZ = 2."""
+    enc = get_encoding("zz", r_zz=2)
     dev = qml.device("default.qubit", wires=2)
 
     @qml.qnode(dev)

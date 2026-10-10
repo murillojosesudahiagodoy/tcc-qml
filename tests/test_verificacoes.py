@@ -19,7 +19,7 @@ from tccqml.verificacoes import (
     aplicar_limiar,
     caracteristicas_fourier,
     escolher_limiar,
-    g_circles,
+    g,
     limiar_circles_um,
     rodar_controle_linear,
     rodar_limiar_circles,
@@ -69,10 +69,11 @@ def test_caracteristicas_seguem_a_ordem_dos_nomes():
     np.testing.assert_allclose(obtido, [formulas[n] for n in NOMES_CARACTERISTICAS])
 
 
-def test_g_circles_no_centro_e_nos_cantos():
+def test_g_no_centro_e_nos_cantos():
+    """g = sin x1 + sin x2, como no texto: vai de 0 nos cantos a 2 no centro."""
     X = np.array([[PI / 2, PI / 2], [0.0, 0.0], [0.0, PI / 2]])
 
-    np.testing.assert_allclose(g_circles(X), [1.0, 0.0, 0.5], atol=1e-12)
+    np.testing.assert_allclose(g(X), [2.0, 0.0, 1.0], atol=1e-12)
 
 
 # --------------------------------------------------------------------------

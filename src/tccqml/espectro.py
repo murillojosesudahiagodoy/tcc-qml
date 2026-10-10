@@ -1,15 +1,15 @@
 """Medição do espectro de Fourier do modelo.
 
-Este é o resultado teórico central do trabalho virando número medido. Um
-classificador variacional cujo bloco de dados é feito de rotações Pauli é uma
-série de Fourier truncada nos atributos (Seção 2.4.5):
+O resultado de Fourier (Schuld et al., 2021; Cap. 2, "O resultado geral")
+virando número medido. Quando os dados entram linearmente nos ângulos de
+rotações de Pauli, a saída é uma série de Fourier truncada nos atributos:
 
     f(x) = sum_{omega in Omega} c_omega e^{i <omega, x>}
 
-e quem determina o conjunto de frequências acessíveis Omega é a CODIFICAÇÃO,
-não o ansatz. O ansatz só escolhe os coeficientes c_omega. A Tabela 5 (p. 52)
-afirma Omega = {-1, 0, 1} por atributo para o angle encoding e
-Omega = {-L, ..., L} para o re-uploading com L blocos.
+e quem determina o suporte Omega é a CODIFICAÇÃO, não o ansatz; o ansatz e o
+observável determinam quais coeficientes c_omega são realizáveis. A tabela de
+suportes do Cap. 2 (tab:espectros) dá Omega = {-1, 0, 1} por atributo para o
+angle encoding e Omega = {-R, ..., R} para o re-uploading com R repetições.
 
 Omega é um LIMITE SUPERIOR: diz quais frequências podem aparecer, não que
 todas apareçam. Duas medições confrontam o limite:
@@ -19,7 +19,7 @@ todas apareçam. Duas medições confrontam o limite:
 - `espectro_2d()` avalia f numa grade inteira de [0, 2pi)^2 (FFT 2D) e conta
   os termos (omega_1, omega_2) que de fato têm energia, termos cruzados
   incluídos. É esse número, e não (2 omega_max + 1)^d, que se compara aos
-  (2L + 1)^d termos previstos.
+  (2R + 1)^d termos previstos.
 
 Onde NÃO se aplica, e por quê — documentado aqui para ninguém tentar depois:
 
@@ -28,13 +28,13 @@ Onde NÃO se aplica, e por quê — documentado aqui para ninguém tentar depois
   denso sem significado teórico.
 - **zz**: as frequências vivem nas fases phi_ij(x) = (pi - x_i)(pi - x_j), que
   são produtos de atributos. Varrer x_1 com x_2 fixo dá frequências em x_1, mas
-  elas dependem do x_2 escolhido — não são o Omega da Tabela 5.
+  elas dependem do x_2 escolhido — não são o Omega da tabela de suportes.
 
 Uma assimetria MEDIDA, que vale reportar no Capítulo 4: com dois qubits, o par
 de CNOTs em anel do StronglyEntanglingLayers leva Z_0 exatamente em Z_1 na
-imagem de Heisenberg. O efeito é que o último bloco S(x) não alcança o atributo
-0: varrendo x_0 o espectro medido vai só até L - 1, enquanto varrendo x_1 vai
-até L. Com L = 1 o modelo ignora x_0 por completo. O limite teórico é sobre o
+imagem de Heisenberg. O efeito é que o último bloco S(x) não alcança x_1:
+varrendo-o, o espectro medido vai só até R - 1, enquanto em x_2 vai até R.
+Com R = 1 o modelo ignora x_1 por completo. O limite teórico é sobre o
 que a CODIFICAÇÃO torna acessível; o que se perde num atributo é consequência
 da arquitetura (anel de CNOTs + medição de Z_0), não da codificação. Por isso
 a tabela reporta o omega de CADA atributo, e não só o máximo entre eles.
@@ -145,7 +145,7 @@ def espectro_2d(
     Diferente da varredura 1D, nada fica fixo: todos os termos da série,
     cruzados incluídos, aparecem com o seu coeficiente. `n_pontos` por eixo só
     precisa passar de 2 * omega_max para não haver aliasing; 32 cobre até
-    omega = 15, folga de sobra para L <= 5.
+    omega = 15, folga de sobra para R <= 5.
     """
     if _n_features(clf) != 2:
         raise ValueError("espectro_2d só está definido para d = 2 atributos")
@@ -200,38 +200,37 @@ def espectro_por_atributo(
     ]
 
 
-def omega_previsto(encoding: str, L_reup: int = PADRAO.L_reup) -> set[int] | None:
-    """Omega que a Tabela 5 (p. 52) prevê por atributo. None onde não se aplica."""
+def omega_previsto(encoding: str, R: int = PADRAO.R) -> set[int] | None:
+    """Omega previsto por atributo (tab:espectros, Cap. 2). None onde não se aplica."""
     if encoding == "angle":
         return {-1, 0, 1}
     if encoding == "reuploading":
-        return set(range(-L_reup, L_reup + 1))
+        return set(range(-R, R + 1))
     return None
 
 
-def n_termos_previsto(encoding: str, d: int, L_reup: int = PADRAO.L_reup) -> int | None:
-    """|Omega|^d: 9 para o angle em d = 2; (2L+1)^d para o re-uploading.
+def n_termos_previsto(encoding: str, d: int, R: int = PADRAO.R) -> int | None:
+    """|Omega|^d: 9 para o angle em d = 2; (2R+1)^d para o re-uploading.
 
-    Com d = 2 e L = 3 isso dá 49 termos de Fourier contra p = 18 parâmetros
-    treináveis (ou os 12 da configuração de referência das outras
-    codificações). Os coeficientes não podem, portanto, ser escolhidos de forma
-    independente — é a explicação teórica da saturação da Previsão 5
-    (Seção 2.5.6.1).
+    Conta elementos do SUPORTE, não coeficientes ajustáveis. Com d = 2 e R = 3
+    são 49 elementos contra p = 18 parâmetros, de modo que os coeficientes não
+    podem ser escolhidos de forma independente — é a motivação da hipótese H5
+    (Cap. 2, "Número de parâmetros"), não uma demonstração de saturação.
     """
-    omega = omega_previsto(encoding, L_reup)
+    omega = omega_previsto(encoding, R)
     return None if omega is None else len(omega) ** d
 
 
 def tabela_espectro(
     n_features: int = 2,
-    L_reups: tuple[int, ...] = (1, 2, 3),
-    n_layers: int = PADRAO.n_layers,
+    valores_R: tuple[int, ...] = (1, 2, 3),
+    L_var: int = PADRAO.L_var,
     seed: int = PADRAO.seed,
 ) -> pd.DataFrame:
     """Omega medido contra Omega previsto, uma linha por configuração.
 
-    Inclui o `angle` de propósito: ele é o piso contra o qual o re-uploading
-    é medido (ver `test_angle_nao_tem_energia_acima_da_frequencia_1`).
+    Inclui o `angle` de propósito: é a referência de menor suporte contra a
+    qual o re-uploading é medido (ver `test_angle_nao_tem_energia_acima_da_frequencia_1`).
 
     Colunas de medição, todas lidas da FFT 2D:
 
@@ -247,10 +246,10 @@ def tabela_espectro(
 
     linhas = []
     configuracoes: list[tuple[str, dict | None, int | None]] = [("angle", None, None)]
-    configuracoes += [("reuploading", {"L_reup": L}, L) for L in L_reups]
+    configuracoes += [("reuploading", {"R": R}, R) for R in valores_R]
 
-    for enc, kwargs, L in configuracoes:
-        clf = model.build(enc, n_features=n_features, n_layers=n_layers, enc_kwargs=kwargs)
+    for enc, kwargs, R in configuracoes:
+        clf = model.build(enc, n_features=n_features, L_var=L_var, enc_kwargs=kwargs)
         w, alpha, _ = pesos_iniciais(clf, seed=seed)
         # Pesos aleatórios pequenos podem esconder frequências altas por
         # coeficiente quase nulo; a escala maior excita todo o espectro
@@ -258,14 +257,14 @@ def tabela_espectro(
         w = w * 3.0
         e2 = espectro_2d(clf, w, alpha)
         por_atributo = [e2.omega_max(i) for i in range(n_features)]
-        previsto = max(omega_previsto(enc, L or PADRAO.L_reup))
+        previsto = max(omega_previsto(enc, R or PADRAO.R))
         linhas.append(
             {
                 "encoding": enc,
-                "L_reup": L,
+                "R": R,
                 "omega_max_previsto": previsto,
                 **{f"omega_max_x{i + 1}": v for i, v in enumerate(por_atributo)},
-                "n_termos_previsto": n_termos_previsto(enc, n_features, L or PADRAO.L_reup),
+                "n_termos_previsto": n_termos_previsto(enc, n_features, R or PADRAO.R),
                 "n_termos_medido": e2.n_termos,
                 "n_termos_cruzados": e2.n_cruzados,
                 "n_params_circuito": clf.n_params_circuito,

@@ -1,4 +1,4 @@
-encoding,dataset,lr_escolhido,acc_val_mean_escolhido,acc_val_std_escolhido,acc_teste_mean_escolhido,acc_teste_std_escolhido,lr_protocolo,acc_val_mean_protocolo,acc_val_std_protocolo,acc_teste_mean_protocolo,acc_teste_std_protocolo,n_sementes,p,n_qubits
+encoding,dataset,eta_escolhido,acc_val_mean_escolhido,acc_val_std_escolhido,acc_teste_mean_escolhido,acc_teste_std_escolhido,eta_protocolo,acc_val_mean_protocolo,acc_val_std_protocolo,acc_teste_mean_protocolo,acc_teste_std_protocolo,n_sementes,p,n_qubits
 amplitude,circles,0.3,0.8266666666666668,0.05217491947499508,0.7733333333333334,0.04503085362035433,0.1,0.8200000000000001,0.04472135954999577,0.7833333333333334,0.05137011669140812,5,6,1
 amplitude,moons,0.3,0.8633333333333335,0.04624812308503867,0.8366666666666667,0.02173067468400884,0.1,0.8566666666666667,0.041833001326703756,0.8266666666666668,0.019002923751652287,5,6,1
 amplitude,xor,0.3,0.7466666666666667,0.043140597018482635,0.6933333333333334,0.05602578771323871,0.1,0.7333333333333334,0.051370116691408174,0.6933333333333334,0.0693221144769514,5,6,1

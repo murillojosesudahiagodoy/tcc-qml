@@ -1,6 +1,6 @@
-"""Contagem de recursos dos circuitos — a lista da Etapa 9 do roteiro.
+"""Contagem de recursos dos circuitos.
 
-A Etapa 9 do roteiro manda registrar, para cada codificação: número de qubits,
+Para cada codificação registram-se: número de qubits,
 profundidade da codificação, profundidade total, número de portas, número de
 portas de dois qubits e número de parâmetros treináveis. É exatamente o que
 `stats()` devolve.
@@ -8,16 +8,18 @@ portas de dois qubits e número de parâmetros treináveis. É exatamente o que
 Duas decisões que mudam os números e por isso ficam explícitas:
 
 1. **A contagem é feita no circuito já decomposto** nas portas básicas
-   (Seção 2.6.1.1). Sem isso, "prepare o estado |psi(x)>" contaria como uma
+   (Cap. 2, "Modelo de recursos"): rotações de um eixo, Hadamard e CNOT.
+   Sem isso, "prepare o estado |psi(x)>" contaria como uma
    porta só e a comparação perderia o sentido: o amplitude encoding pareceria
    mais barato que o angle. `GlobalPhase` e `Identity` não são contados —
    fase global não é observável e não custa nada em hardware.
 
 2. **As métricas de gradiente são analíticas, não medidas.** O treino roda em
    `default.qubit` com retropropagação, que não paga o custo do
-   parameter-shift (Seção 2.3.5.1). As contagens descrevem o que o MESMO
+   parameter-shift (Cap. 2, "regra de deslocamento de parâmetro"). As
+   contagens descrevem o que o MESMO
    treino custaria em hardware real, e é isso que o TCC reporta: 2p + 1
-   avaliações por amostra (as 2p deslocadas da Eq. 2.47 mais a do resíduo
+   avaliações por amostra (as 2p deslocadas do parameter-shift mais a do resíduo
    f(x) + b - y), (2p + 1)|B| avaliações e (2p + 1)|B|S shots por passo.
 """
 
@@ -54,7 +56,7 @@ IGNORADAS = {"GlobalPhase", "Identity"}
 
 
 def _decompor(tape):
-    """Reduz a tape às portas básicas (Seção 2.6.1.1)."""
+    """Reduz a tape às portas básicas (Cap. 2, "Modelo de recursos")."""
     (decomposta,), _ = qml.transforms.decompose(tape, gate_set=PORTAS_BASICAS)
     return decomposta
 
@@ -93,9 +95,9 @@ def _profundidade(operacoes) -> int:
 def _tape_do_bloco_de_dados(clf: Classificador, x_exemplo) -> object:
     """QNode auxiliar com APENAS a codificação, para medir sua profundidade.
 
-    No re-uploading isso são os `L_reup` blocos S(x) sem as camadas treináveis
-    — ou seja, a soma das profundidades dos blocos de dados, que a Seção 2.6.2.4
-    pede separada da profundidade total.
+    No re-uploading isso são os `R` blocos S(x) sem as camadas treináveis
+    — ou seja, a soma das profundidades dos blocos de dados, reportada separada
+    da profundidade total (Cap. 3, "Métricas e critério de análise").
     """
     enc = get_encoding(clf.encoding, **(clf.enc_kwargs or {}))
     bloco = enc.bloco_de_dados()
@@ -110,7 +112,7 @@ def _tape_do_bloco_de_dados(clf: Classificador, x_exemplo) -> object:
 
 
 def aval_derivadas_amostra(n_params_circuito: int) -> int:
-    """Eq. 2.47: só as 2p avaliações DESLOCADAS do parameter-shift, por amostra.
+    """Só as 2p avaliações DESLOCADAS do parameter-shift, por amostra.
 
     Analítica. Dá as derivadas parciais de f(x) e mais nada; fica nos CSVs
     para comparação com o texto. O gradiente do custo também precisa do
@@ -125,8 +127,8 @@ def aval_gradiente_amostra(n_params_circuito: int) -> int:
 
     O gradiente de (f(x) + b - y)^2 é 2 (f(x) + b - y) df/dtheta: as 2p
     avaliações deslocadas dão df/dtheta, mas o resíduo exige f(x) no ponto
-    sem deslocamento — uma avaliação a mais por amostra. A Eq. 2.48 do texto
-    conta só as 2p; o texto precisa acompanhar esta contagem.
+    sem deslocamento — uma avaliação a mais por amostra. É a contagem
+    (2p + 1)|B| que o texto usa (Cap. 2, "regra de deslocamento de parâmetro").
     """
     return aval_derivadas_amostra(n_params_circuito) + 1
 
@@ -145,8 +147,8 @@ def n_shots_passo(n_params_circuito: int, batch_size: int, shots: int) -> int:
     """Shots por passo do otimizador: (2p + 1)|B|S, com S = `Protocolo.shots`.
 
     Analítica. Com p = 12, |B| = 20 (`PADRAO.batch_efetivo`) e S = 1000 dá
-    500 avaliações x 1000 shots = 500 000 execuções para UM passo. Corrige os
-    2p|B|S da Eq. 2.48, que esquecem a avaliação do resíduo.
+    500 avaliações x 1000 shots = 500 000 execuções para UM passo, já com a
+    avaliação do resíduo.
     """
     return n_aval_passo(n_params_circuito, batch_size) * int(shots)
 
@@ -156,14 +158,19 @@ def stats(
     x_exemplo,
     weights=None,
     alpha=None,
-    batch_size: int = 21,
-    shots: int = 1000,
+    batch_size: int | None = None,
+    shots: int | None = None,
 ) -> dict:
     """Métricas de custo estático do circuito de `clf`.
 
     `x_exemplo` é uma amostra ÚNICA (vetor de `n_features`), não um lote: a
     estrutura do circuito não depende do valor dos dados, só da forma.
+    `batch_size` e `shots` têm como padrão o |B| e o S do protocolo.
     """
+    from tccqml.config import PADRAO
+
+    batch_size = PADRAO.batch_efetivo if batch_size is None else batch_size
+    shots = PADRAO.shots if shots is None else shots
     if weights is None:
         weights, alpha_padrao, _ = pesos_iniciais(clf)
         alpha = alpha_padrao if alpha is None else alpha
@@ -200,18 +207,18 @@ def stats(
     }
 
 
-def stats_ansatz(n_qubits: int, n_layers: int, ansatz: str = "strongly_entangling") -> dict:
-    """Recursos do ansatz sozinho — é a Tabela 2 (p. 31) do texto.
+def stats_ansatz(n_qubits: int, L_var: int, ansatz: str = "strongly_entangling") -> dict:
+    """Recursos do ansatz sozinho, sem codificação.
 
-    Separado de `stats()` porque a Tabela 2 compara ansätze, sem codificação:
-    para n qubits e L camadas o StronglyEntanglingLayers tem 3Ln parâmetros,
+    Separado de `stats()` porque compara ansätze, sem codificação:
+    para n qubits e L_var camadas o StronglyEntanglingLayers tem 3 L_var n parâmetros,
     3Ln portas de um qubit, Ln de dois qubits e 6Ln avaliações deslocadas
-    (as 2p da Eq. 2.47; com a do resíduo, 6Ln + 1 por amostra).
+    (as 2p do parameter-shift; com a do resíduo, 6Ln + 1 por amostra).
     """
     from tccqml.ansatz import get_ansatz
 
     ans = get_ansatz(ansatz)
-    forma = tuple(ans.weights_shape(n_layers, n_qubits))
+    forma = tuple(ans.weights_shape(L_var, n_qubits))
     pesos = pnp.zeros(forma, requires_grad=True)
     dev = qml.device("default.qubit", wires=n_qubits)
 
@@ -237,7 +244,7 @@ def formatar(s: dict) -> str:
         f"  portas de 1 qubit .... {s['gates_1q']}",
         f"  portas de 2 qubits ... {s['gates_2q']}",
         f"  parâmetros (p) ....... {s['n_params_circuito']}",
-        f"  aval. deslocadas ..... {s['aval_derivadas_amostra']}  por amostra (2p, Eq. 2.47)",
+        f"  aval. deslocadas ..... {s['aval_derivadas_amostra']}  por amostra (2p, parameter-shift)",
         f"  aval. p/ gradiente ... {s['aval_gradiente_amostra']}  por amostra (2p + 1)",
         f"  aval. por passo ...... {s['n_aval_passo']:,}  ((2p + 1)|B|)",
         f"  shots por passo ...... {s['n_shots_passo']:,}  ((2p + 1)|B|S)",

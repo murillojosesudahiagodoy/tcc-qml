@@ -8,9 +8,10 @@ Duas perguntas sobre os DADOS, não sobre os circuitos:
    conjunto? Se não contém, nenhum classificador que seja combinação linear
    dessas funções separa o conjunto, e uma acurácia baixa do angle deixa de
    ser surpresa.
-2. **Limiar de g no circles.** A função g(x) = (sin x1 + sin x2)/2, que é
-   máxima no centro do quadrado normalizado, separa o círculo interno do
-   externo com os raios e o reescalonamento reais? Roda sem ruído (a
+2. **Limiar de g no circles.** A regra g(x)/2 > t, com g(x) = sin x1 + sin x2
+   (Cap. 3, "Previsões e hipóteses"), máxima no centro do quadrado
+   normalizado, separa o círculo interno do externo com os raios e o
+   reescalonamento reais? Roda sem ruído (a
    geometria pura) e com o ruído do protocolo.
 
 Nada aqui muda dado, partição, normalização ou semente: tudo sai de
@@ -146,23 +147,29 @@ def _media_desvio(df: pd.DataFrame, chaves: list[str], colunas: list[str]) -> pd
 # --------------------------------------------------------------------------
 
 
-def g_circles(X: np.ndarray) -> np.ndarray:
-    """g(x) = (sin x1 + sin x2)/2 nas coordenadas normalizadas para [0, pi].
+def g(X: np.ndarray) -> np.ndarray:
+    """g(x) = sin x1 + sin x2 nas coordenadas normalizadas para [0, pi].
+
+    A regra do texto compara g/2 com o limiar t: a divisão por 2 põe g no
+    intervalo [-1, 1] da saída do modelo.
 
     sin é máximo em pi/2, que é aproximadamente onde o reescalonamento põe o
     centro dos círculos: o círculo interno tende a g alto, o externo a g
     baixo. A verificação mede se "tende" vira "separa".
     """
     X = np.asarray(X, dtype=float)
-    return (np.sin(X[:, 0]) + np.sin(X[:, 1])) / 2
+    return np.sin(X[:, 0]) + np.sin(X[:, 1])
 
 
-def aplicar_limiar(g: np.ndarray, limiar: float, sentido: str) -> np.ndarray:
-    """Classe 1 quando g > t (sentido ">") ou quando g < t (sentido "<")."""
+def aplicar_limiar(valores: np.ndarray, limiar: float, sentido: str) -> np.ndarray:
+    """Classe 1 quando valor > t (sentido ">") ou quando valor < t (sentido "<").
+
+    No circles, `valores` é g/2, a quantidade que o texto compara com t.
+    """
     if sentido == ">":
-        return (np.asarray(g) > limiar).astype(int)
+        return (np.asarray(valores) > limiar).astype(int)
     if sentido == "<":
-        return (np.asarray(g) < limiar).astype(int)
+        return (np.asarray(valores) < limiar).astype(int)
     raise ValueError(f"sentido inválido: {sentido!r}")
 
 
@@ -171,7 +178,7 @@ def escolher_limiar(g_treino: np.ndarray, y_treino: np.ndarray) -> tuple[float, 
 
     Só recebe dados de treino, de propósito: a assinatura não deixa a
     validação nem o teste entrarem na escolha. Os candidatos são os pontos
-    médios entre valores consecutivos de g no treino, mais um abaixo do mínimo
+    médios entre valores consecutivos de g/2 no treino, mais um abaixo do mínimo
     e um acima do máximo, então nenhuma amostra de treino cai em cima do
     limiar.
 
@@ -197,7 +204,7 @@ def escolher_limiar(g_treino: np.ndarray, y_treino: np.ndarray) -> tuple[float, 
 
 
 def _descrever_g(g: np.ndarray, y: np.ndarray) -> dict:
-    """Média, desvio, mínimo e máximo de g por classe, e quanto elas se cruzam.
+    """Média, desvio, mínimo e máximo de g = sin x1 + sin x2 por classe, e quanto se cruzam.
 
     `g_sobreposicao` é a fração das amostras que cai no intervalo comum às
     duas classes, [max dos mínimos, min dos máximos]: zero quer dizer que
@@ -225,15 +232,16 @@ def limiar_circles_um(seed: int, noise: float, protocolo: Protocolo = PADRAO) ->
     viu.
     """
     ds = _carregar("circles", seed, protocolo, noise=noise)
-    g_tr, g_va, g_te = (g_circles(X) for X in (ds.X_train, ds.X_val, ds.X_test))
-    limiar, sentido = escolher_limiar(g_tr, ds.y_train)
+    g_tr, g_va, g_te = (g(X) for X in (ds.X_train, ds.X_val, ds.X_test))
+    # A regra do texto é g/2 > t: o limiar t vive na escala de g/2.
+    limiar, sentido = escolher_limiar(g_tr / 2, ds.y_train)
     return {
         "seed": seed,
         "limiar": limiar,
         "sentido": sentido,
-        "acc_treino": (aplicar_limiar(g_tr, limiar, sentido) == ds.y_train).mean(),
-        "acc_val": (aplicar_limiar(g_va, limiar, sentido) == ds.y_val).mean(),
-        "acc_teste": (aplicar_limiar(g_te, limiar, sentido) == ds.y_test).mean(),
+        "acc_treino": (aplicar_limiar(g_tr / 2, limiar, sentido) == ds.y_train).mean(),
+        "acc_val": (aplicar_limiar(g_va / 2, limiar, sentido) == ds.y_val).mean(),
+        "acc_teste": (aplicar_limiar(g_te / 2, limiar, sentido) == ds.y_test).mean(),
         **_descrever_g(g_tr, ds.y_train),
     }
 
@@ -244,7 +252,7 @@ def rodar_limiar_circles(
     sementes: tuple[int, ...] | None = None,
     verbose: bool = True,
 ) -> pd.DataFrame:
-    """A regra "g > t" no circles, sem ruído e com o ruído do protocolo.
+    """A regra "g/2 > t" no circles, sem ruído e com o ruído do protocolo.
 
     Sem ruído os dois círculos têm raios fixos (1 e `circles_factor`) e a
     pergunta é só geométrica: o reescalonamento para [0, pi] por atributo
@@ -266,7 +274,7 @@ def rodar_limiar_circles(
         df, ["versao"], ["limiar", "acc_treino", "acc_val", "acc_teste", "g_sobreposicao"]
     )
     if verbose:
-        print("limiar de g = (sin x1 + sin x2)/2 no circles (escolhido no treino):")
+        print("regra g/2 > t no circles, g = sin x1 + sin x2 (t escolhido no treino):")
     _gravar(df, resumo, "limiar_circles", out, verbose)
     return df
 

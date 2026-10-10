@@ -1,4 +1,4 @@
-"""Métricas de desempenho (Etapa 8).
+"""Métricas de desempenho.
 
 Aqui ficam só as métricas que dependem do TREINO. As métricas de custo do
 circuito (profundidade, portas, qubits) são estáticas e vivem em circuit_stats.py.

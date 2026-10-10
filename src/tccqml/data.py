@@ -38,7 +38,11 @@ class Dataset:
 
 
 def make_xor(n_samples: int = PADRAO.n_samples, noise: float = PADRAO.noise, seed: int = 42):
-    """XOR: duas classes em quadrantes opostos. Não separável linearmente."""
+    """xor: duas classes em quadrantes opostos. Não separável linearmente.
+
+    O rótulo é calculado ANTES do ruído, a partir dos pontos sorteados em
+    [-1, 1]^2; o ruído gaussiano é somado depois (Cap. 3, "Conjuntos de dados").
+    """
     rng = np.random.default_rng(seed)
     X = rng.uniform(-1.0, 1.0, size=(n_samples, 2))
     y = (X[:, 0] * X[:, 1] > 0).astype(int)
@@ -86,7 +90,7 @@ def load_dataset(
     validação e teste podem cair um pouco fora de [0, pi].
 
     Os valores padrão vêm de `config.Protocolo` — o protocolo mora num lugar
-    só, e o N = 300 da Seção 2.5.7 é o que de fato roda.
+    só, e o N = 300 do Cap. 3 ("Conjuntos de dados") é o que de fato roda.
     """
     if name not in _GENERATORS:
         raise ValueError(f"dataset desconhecido: {name!r}. Opções: {sorted(_GENERATORS)}")

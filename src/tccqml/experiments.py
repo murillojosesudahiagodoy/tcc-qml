@@ -1,4 +1,4 @@
-"""Runner dos experimentos — a comparação da Etapa 10 do roteiro.
+"""Runner dos experimentos — a comparação entre codificações.
 
 Aqui mora a grade que produz os números do Capítulo 4. Tudo roda com o MESMO
 protocolo (`config.Protocolo`): a codificação é a única coisa que varia, que é
@@ -7,7 +7,8 @@ otimizador, ao ansatz ou aos dados.
 
 O treino usa `default.qubit` com retropropagação. O parameter-shift NÃO é
 executado — ele é contabilizado analiticamente em `circuit_stats.py`
-(Seção 2.3.5.1). As colunas de custo de gradiente que saem nos CSVs são,
+(Cap. 2, "regra de deslocamento de parâmetro"). As colunas de custo de
+gradiente que saem nos CSVs são,
 portanto, o custo que este mesmo treino teria em hardware real.
 """
 
@@ -27,7 +28,7 @@ from tccqml.data import load_dataset
 from tccqml.train import treinar
 
 # Recursos do circuito completo e, separadamente, do bloco de codificação
-# (Seção 3.8): qubits, profundidade, portas totais e portas de dois qubits.
+# (Cap. 3, "Métricas"): qubits, profundidade, portas totais e portas de dois qubits.
 COLUNAS_CUSTO = (
     "n_qubits",
     "depth",
@@ -48,8 +49,8 @@ COLUNAS_CUSTO = (
 )
 
 
-def _enc_kwargs(encoding: str, L_reup: int) -> dict | None:
-    return {"L_reup": L_reup} if encoding == "reuploading" else None
+def _enc_kwargs(encoding: str, R: int) -> dict | None:
+    return {"R": R} if encoding == "reuploading" else None
 
 
 def rodar_um(
@@ -58,7 +59,7 @@ def rodar_um(
     seed: int,
     protocolo: Protocolo = PADRAO,
     ansatz: str | None = None,
-    L_reup: int | None = None,
+    R: int | None = None,
     feature_range: tuple[float, float] | None = None,
     verbose: bool = False,
 ) -> tuple[pd.DataFrame, dict, object]:
@@ -67,7 +68,7 @@ def rodar_um(
     O histórico já sai com as colunas de custo do circuito repetidas em toda
     linha, o que deixa o CSV autossuficiente para as tabelas do Capítulo 4.
     """
-    L_reup = protocolo.L_reup if L_reup is None else L_reup
+    R = protocolo.R if R is None else R
     ds = load_dataset(
         dataset,
         n_samples=protocolo.n_samples,
@@ -80,9 +81,9 @@ def rodar_um(
     clf = model.build(
         encoding,
         n_features=ds.n_features,
-        n_layers=protocolo.n_layers,
+        L_var=protocolo.L_var,
         ansatz=ansatz or protocolo.ansatz,
-        enc_kwargs=_enc_kwargs(encoding, L_reup),
+        enc_kwargs=_enc_kwargs(encoding, R),
     )
     custo = stats(
         clf,
@@ -97,7 +98,7 @@ def rodar_um(
         ds,
         epocas=protocolo.epocas,
         batch_size=protocolo.batch_size,
-        lr=protocolo.lr,
+        eta=protocolo.eta,
         seed=seed,
         verbose=verbose,
     )
@@ -108,7 +109,7 @@ def rodar_um(
     hist.insert(0, "dataset", dataset)
     hist.insert(0, "encoding", encoding)
     hist["ansatz"] = clf.ansatz
-    hist["L_reup"] = L_reup if encoding == "reuploading" else np.nan
+    hist["R"] = R if encoding == "reuploading" else np.nan
     for coluna in COLUNAS_CUSTO:
         hist[coluna] = custo[coluna]
 
@@ -117,10 +118,10 @@ def rodar_um(
         "dataset": dataset,
         "seed": seed,
         "ansatz": clf.ansatz,
-        "L_reup": L_reup if encoding == "reuploading" else np.nan,
+        "R": R if encoding == "reuploading" else np.nan,
         # Só faz diferença nas codificações que aplicam o ansatz depois do
-        # bloco de dados; no re-uploading quem dita as camadas é `L_reup`.
-        "n_layers": protocolo.n_layers if encoding != "reuploading" else np.nan,
+        # bloco de dados; no re-uploading quem dita as camadas é `R`.
+        "L_var": protocolo.L_var if encoding != "reuploading" else np.nan,
         # As três acurácias são do modelo da época escolhida pela validação;
         # `acc_teste` é a única medida feita no teste.
         "acc_treino": r.acc_treino,
@@ -136,10 +137,12 @@ def rodar_um(
 
 
 def epoca_para_90pct(hist: pd.DataFrame, coluna: str = "acc_treino") -> int:
-    """Primeira época que atinge 90% da acurácia final — medida de velocidade.
+    """Primeira época em que a acurácia de treino atinge 90% do valor final.
 
-    Convergir rápido e convergir alto são coisas diferentes; esta coluna isola a
-    primeira (é o que a `tab_convergencia` reporta).
+    Coluna auxiliar de `por_treino.csv` e `resumo.csv`; não é usada em
+    nenhuma tabela nem no texto (a antiga `tab_convergencia` foi retirada).
+    Fica no CSV para que os resultados versionados continuem reproduzíveis
+    coluna a coluna.
     """
     alvo = 0.9 * float(hist[coluna].iloc[-1])
     atingiu = hist.index[hist[coluna] >= alvo]
@@ -238,7 +241,7 @@ def resumir(por_treino: pd.DataFrame) -> pd.DataFrame:
     return resumo.merge(custo, on=chaves)
 
 
-def rodar_varredura_L(
+def rodar_varredura_R(
     protocolo: Protocolo = PADRAO,
     out: str | Path | None = None,
     valores: tuple[int, ...] | None = None,
@@ -246,45 +249,47 @@ def rodar_varredura_L(
     sementes: tuple[int, ...] | None = None,
     verbose: bool = True,
 ) -> pd.DataFrame:
-    """Varredura do número de blocos do re-uploading.
+    """Varredura do número de repetições R do re-uploading (`R`).
 
-    Testa duas das cinco previsões da Seção 2.5.9: a 1 (ganho no `moons` a
-    partir de L = 2) e a 5 (saturação da acurácia enquanto o custo sobe
-    linearmente — as colunas de custo saem junto para isso ser verificável na
-    mesma tabela).
+    Testa as hipóteses H1 (no `moons`, o re-uploading melhora em relação ao
+    angle a partir de R = 2; o limiar foi registrado, mas não demonstrado para
+    este circuito, e a comparação é com o angle de mesmo p) e H5 (o ganho para
+    de crescer enquanto o custo sobe linearmente — as colunas de custo saem
+    junto para isso ser verificável na mesma tabela). Cap. 3, "Previsões e
+    hipóteses".
     """
     out = Path(out or protocolo.out)
-    valores = valores or protocolo.L_reup_varredura
+    valores = valores or protocolo.R_varredura
     datasets = datasets or protocolo.datasets_grade
     sementes = sementes or protocolo.sementes
 
     linhas = []
     total = len(valores) * len(datasets) * len(sementes)
     i = 0
-    for L in valores:
+    for R in valores:
         for dataset in datasets:
             for seed in sementes:
                 i += 1
                 _, resumo, _ = rodar_um(
-                    "reuploading", dataset, seed, protocolo, L_reup=L
+                    "reuploading", dataset, seed, protocolo, R=R
                 )
                 linhas.append(resumo)
                 if verbose:
                     print(
-                        f"[{i:3d}/{total}] L={L} {dataset:8s} seed={seed} "
+                        f"[{i:3d}/{total}] R={R} {dataset:8s} seed={seed} "
                         f"teste={resumo['acc_teste']:.3f}"
                     )
 
     varredura = pd.DataFrame(linhas)
     metrics = out / "metrics"
     metrics.mkdir(parents=True, exist_ok=True)
-    varredura.to_csv(metrics / "varredura_L.csv", index=False)
+    varredura.to_csv(metrics / "varredura_R.csv", index=False)
     if verbose:
-        print(f"escrito em {metrics / 'varredura_L.csv'}")
+        print(f"escrito em {metrics / 'varredura_R.csv'}")
     return varredura
 
 
-def rodar_varredura_camadas(
+def rodar_varredura_L_var(
     protocolo: Protocolo = PADRAO,
     out: str | Path | None = None,
     valores: tuple[int, ...] | None = None,
@@ -295,26 +300,28 @@ def rodar_varredura_camadas(
 ) -> pd.DataFrame:
     """Varredura do número de camadas do ansatz numa codificação fixa.
 
-    É o controle da varredura de L. No re-uploading, aumentar L aumenta ao
-    mesmo tempo as frequências acessíveis e o número de parâmetros. No angle,
-    aumentar `n_layers` aumenta só os parâmetros: o espectro continua
-    Omega = {-1, 0, 1} por atributo (Tabela 5). Com dois qubits os dois têm
-    p = 6 por camada, então angle com k camadas e re-uploading com L = k têm o
-    mesmo p, e a diferença de acurácia entre eles é atribuível à frequência.
+    É o controle da varredura de R. No re-uploading, aumentar R aumenta ao
+    mesmo tempo o suporte de frequências e o número de parâmetros. No angle,
+    aumentar `L_var` (L_var) aumenta só os parâmetros: o suporte continua
+    Omega = {-1, 0, 1} por atributo. Com dois qubits os dois têm p = 6 por
+    camada, então angle com L_var = k e re-uploading com R = k têm o mesmo p,
+    e a diferença de acurácia entre eles isola a reinserção dos dados do
+    número de parâmetros. A profundidade não é a mesma: o re-uploading
+    acrescenta R blocos de dados.
 
-    Sai do protocolo congelado de propósito (`n_layers` muda) e por isso
+    Sai do protocolo congelado de propósito (`L_var` muda) e por isso
     grava num CSV próprio, que nunca entra na comparação principal.
     """
     out = Path(out or protocolo.out)
-    valores = valores or protocolo.n_layers_varredura
+    valores = valores or protocolo.L_var_varredura
     datasets = datasets or protocolo.datasets_grade
     sementes = sementes or protocolo.sementes
 
     linhas = []
     total = len(valores) * len(datasets) * len(sementes)
     i = 0
-    for n_layers in valores:
-        variante = replace(protocolo, n_layers=n_layers)
+    for L_var in valores:
+        variante = replace(protocolo, L_var=L_var)
         for dataset in datasets:
             for seed in sementes:
                 i += 1
@@ -322,16 +329,16 @@ def rodar_varredura_camadas(
                 linhas.append(resumo)
                 if verbose:
                     print(
-                        f"[{i:3d}/{total}] {encoding} n_layers={n_layers} "
+                        f"[{i:3d}/{total}] {encoding} L_var={L_var} "
                         f"{dataset:8s} seed={seed} teste={resumo['acc_teste']:.3f}"
                     )
 
     varredura = pd.DataFrame(linhas)
     metrics = out / "metrics"
     metrics.mkdir(parents=True, exist_ok=True)
-    varredura.to_csv(metrics / "varredura_camadas.csv", index=False)
+    varredura.to_csv(metrics / "varredura_L_var.csv", index=False)
     if verbose:
-        print(f"escrito em {metrics / 'varredura_camadas.csv'}")
+        print(f"escrito em {metrics / 'varredura_L_var.csv'}")
     return varredura
 
 
@@ -343,11 +350,12 @@ def rodar_ablacao(
     sementes: tuple[int, ...] | None = None,
     verbose: bool = True,
 ) -> pd.DataFrame:
-    """Ablação do entrelaçamento do ansatz (Previsão 3, Eq. 2.83).
+    """Ablação do entrelaçamento do ansatz (hipótese H3).
 
     Roda a mesma configuração com e sem CNOTs no ansatz. Sem entrelaçamento o
-    estado é produto e <Z_0> só enxerga o primeiro atributo (Eq. 2.83). Isso
-    derruba QUALQUER conjunto que precise do segundo atributo, não só o XOR —
+    estado é produto e <Z_0> só enxerga o primeiro atributo (Cap. 2,
+    "Entrelaçamento e termos cruzados"). Isso
+    derruba QUALQUER conjunto que precise do segundo atributo, não só o xor —
     por isso a ablação roda nos três conjuntos por padrão: a queda em moons e
     circles é o controle que mostra o que a ablação de fato mede (dependência
     do entrelaçamento dado o observável local Z_0).
@@ -388,14 +396,14 @@ def diagnostico_amplitude(
     """Diagnóstico do amplitude: normalização [0, pi] contra [-1, 1].
 
     O amplitude encoding descarta a norma e só enxerga a DIREÇÃO do vetor
-    (Seção 2.4.4.1). Como `data.py` normaliza para [0, pi], todos os pontos
-    caem no primeiro quadrante e o ângulo entre dois vetores quaisquer fica
-    espremido em [0, pi/2] — o que pode arruinar o desempenho por um motivo que
-    não é da codificação.
+    (Cap. 2, "Amplitude encoding"). Como `data.py` normaliza para [0, pi],
+    todos os pontos caem no primeiro quadrante e o ângulo entre dois vetores
+    quaisquer fica em [0, pi/2], e a fronteira, formada por direções que partem
+    da origem, só separa setores angulares desse quadrante.
 
-    Este runner mede as duas normalizações e reporta as duas. A escolha de qual
-    usar no texto é do autor, não do código; o resto do trabalho continua em
-    [0, pi], que é o intervalo que o angle encoding exige.
+    Este runner mede as duas normalizações e reporta as duas. A comparação
+    principal mantém [0, pi] para todas as codificações, que é a escala
+    escolhida para o angle encoding (escala e localidade, não uma exigência).
     """
     out = Path(out or protocolo.out)
     datasets = datasets or protocolo.datasets_grade
@@ -433,12 +441,12 @@ def diagnostico_amplitude(
     return diag
 
 
-# Colunas por treino de `sensibilidade_lr.csv`. `p` é `n_params_circuito`
+# Colunas por treino de `sensibilidade_eta.csv`. `p` é `n_params_circuito`
 # (sem o viés), o mesmo `p` das contagens de custo.
 COLUNAS_SENSIBILIDADE = (
     "encoding",
     "dataset",
-    "lr",
+    "eta",
     "seed",
     "acc_treino",
     "acc_val",
@@ -449,7 +457,7 @@ COLUNAS_SENSIBILIDADE = (
 )
 
 
-def rodar_sensibilidade_lr(
+def rodar_sensibilidade_eta(
     protocolo: Protocolo = PADRAO,
     out: str | Path | None = None,
     encodings: tuple[str, ...] | None = None,
@@ -459,23 +467,23 @@ def rodar_sensibilidade_lr(
 ) -> pd.DataFrame:
     """Verificação de sensibilidade da taxa de aprendizado.
 
-    A grade principal usa o mesmo `lr` para todas as codificações. Se uma
+    A grade principal usa o mesmo `eta` para todas as codificações. Se uma
     delas fica para trás, falta saber se é a representação que não alcança a
     fronteira ou só o otimizador que não chegou lá com aquele passo. Esta
     verificação separa as duas coisas: repete o treino da grade (mesmo split,
     mesma inicialização, mesma escolha de época pela validação, o mesmo
-    `L_reup` no re-uploading) variando APENAS `lr` sobre `lr_candidatos`.
+    `R` no re-uploading) variando APENAS `eta` sobre `eta_candidatos`.
 
     É um experimento à parte: grava em CSVs próprios e não toca nos da
-    comparação principal, que continua com `protocolo.lr`. Todas as
+    comparação principal, que continua com `protocolo.eta`. Todas as
     codificações recebem o mesmo orçamento de candidatos e sementes, e a
-    escolha do `lr` olha só a validação (`escolher_lr`) — o teste aparece no
-    resumo apenas como medida do lr já escolhido.
+    escolha do `eta` olha só a validação (`escolher_eta`) — o teste aparece no
+    resumo apenas como medida do eta já escolhido.
     """
-    if not any(np.isclose(protocolo.lr, c) for c in protocolo.lr_candidatos):
+    if not any(np.isclose(protocolo.eta, c) for c in protocolo.eta_candidatos):
         raise ValueError(
-            f"lr do protocolo ({protocolo.lr}) fora de lr_candidatos: "
-            "a comparação com o lr da grade principal ficaria sem referência"
+            f"eta do protocolo ({protocolo.eta}) fora de eta_candidatos: "
+            "a comparação com o eta da grade principal ficaria sem referência"
         )
     out = Path(out or protocolo.out)
     encodings = encodings or protocolo.encodings_grade
@@ -483,13 +491,13 @@ def rodar_sensibilidade_lr(
     sementes = sementes or protocolo.sementes
 
     linhas = []
-    total = len(encodings) * len(datasets) * len(protocolo.lr_candidatos) * len(sementes)
+    total = len(encodings) * len(datasets) * len(protocolo.eta_candidatos) * len(sementes)
     i = 0
     t_inicio = time.perf_counter()
     for encoding in encodings:
         for dataset in datasets:
-            for lr in protocolo.lr_candidatos:
-                variante = replace(protocolo, lr=lr)
+            for eta in protocolo.eta_candidatos:
+                variante = replace(protocolo, eta=eta)
                 for seed in sementes:
                     i += 1
                     _, resumo, _ = rodar_um(encoding, dataset, seed, variante)
@@ -497,7 +505,7 @@ def rodar_sensibilidade_lr(
                         {
                             "encoding": encoding,
                             "dataset": dataset,
-                            "lr": lr,
+                            "eta": eta,
                             "seed": seed,
                             "acc_treino": resumo["acc_treino"],
                             "acc_val": resumo["acc_val"],
@@ -511,69 +519,69 @@ def rodar_sensibilidade_lr(
                         decorrido = time.perf_counter() - t_inicio
                         restante = decorrido / i * (total - i)
                         print(
-                            f"[{i:3d}/{total}] {encoding:12s} {dataset:8s} lr={lr:<5g} "
+                            f"[{i:3d}/{total}] {encoding:12s} {dataset:8s} eta={eta:<5g} "
                             f"seed={seed} val={resumo['acc_val']:.3f} "
                             f"(faltam ~{restante / 60:.1f} min)"
                         )
 
     por_treino = pd.DataFrame(linhas, columns=list(COLUNAS_SENSIBILIDADE))
-    resumo = resumir_sensibilidade(por_treino, protocolo.lr, protocolo.lr_tolerancia_empate)
+    resumo = resumir_sensibilidade(por_treino, protocolo.eta, protocolo.eta_tolerancia_empate)
 
     metrics = out / "metrics"
     metrics.mkdir(parents=True, exist_ok=True)
-    por_treino.to_csv(metrics / "sensibilidade_lr.csv", index=False)
-    resumo.to_csv(metrics / "resumo_sensibilidade_lr.csv", index=False)
+    por_treino.to_csv(metrics / "sensibilidade_eta.csv", index=False)
+    resumo.to_csv(metrics / "resumo_sensibilidade_eta.csv", index=False)
     if verbose:
         print("\nlr escolhido pela validação:")
         print(
-            resumo.pivot(index="encoding", columns="dataset", values="lr_escolhido").to_string()
+            resumo.pivot(index="encoding", columns="dataset", values="eta_escolhido").to_string()
         )
         print(f"escrito em {metrics}")
     return por_treino
 
 
-def escolher_lr(
+def escolher_eta(
     por_treino: pd.DataFrame,
-    lr_protocolo: float,
-    tolerancia: float = PADRAO.lr_tolerancia_empate,
+    eta_protocolo: float,
+    tolerancia: float = PADRAO.eta_tolerancia_empate,
 ) -> pd.DataFrame:
-    """O lr de maior acc_val média nas sementes, por (codificação, dataset).
+    """O eta de maior acc_val média nas sementes, por (codificação, dataset).
 
     Só `acc_val` entra aqui — a coluna `acc_teste` nem é lida. Escolher pelo
     teste transformaria a acurácia de teste reportada numa estimativa
     otimista, que é justamente o que a separação treino/validação/teste evita.
 
     Empate (diferença absoluta até `tolerancia`, que vem de
-    `Protocolo.lr_tolerancia_empate` e só absorve erro de ponto flutuante):
-    fica o lr do protocolo, se ele está entre os empatados — a verificação só
-    deve "mudar" o lr quando houver ganho de fato na validação; senão, o menor
-    lr empatado, que é o passo mais conservador.
+    `Protocolo.eta_tolerancia_empate` e só absorve erro de ponto flutuante):
+    fica o eta do protocolo, se ele está entre os empatados — a verificação só
+    deve "mudar" o eta quando houver ganho de fato na validação; senão, o menor
+    eta empatado, que é o passo mais conservador.
     """
-    medias = por_treino.groupby(["encoding", "dataset", "lr"])["acc_val"].mean()
+    medias = por_treino.groupby(["encoding", "dataset", "eta"])["acc_val"].mean()
     escolhas = []
     for (encoding, dataset), fatia in medias.groupby(level=["encoding", "dataset"]):
         fatia = fatia.droplevel(["encoding", "dataset"])
         melhor = fatia.max()
-        empatados = sorted(lr for lr, v in fatia.items() if np.isclose(v, melhor, rtol=0, atol=tolerancia))
-        protocolo_empatado = [lr for lr in empatados if np.isclose(lr, lr_protocolo)]
-        lr = protocolo_empatado[0] if protocolo_empatado else empatados[0]
-        escolhas.append({"encoding": encoding, "dataset": dataset, "lr_escolhido": lr})
+        empatados = sorted(eta for eta, v in fatia.items() if np.isclose(v, melhor, rtol=0, atol=tolerancia))
+        protocolo_empatado = [eta for eta in empatados if np.isclose(eta, eta_protocolo)]
+        eta = protocolo_empatado[0] if protocolo_empatado else empatados[0]
+        escolhas.append({"encoding": encoding, "dataset": dataset, "eta_escolhido": eta})
     return pd.DataFrame(escolhas)
 
 
 def resumir_sensibilidade(
     por_treino: pd.DataFrame,
-    lr_protocolo: float,
-    tolerancia: float = PADRAO.lr_tolerancia_empate,
+    eta_protocolo: float,
+    tolerancia: float = PADRAO.eta_tolerancia_empate,
 ) -> pd.DataFrame:
-    """Lr escolhido pela validação ao lado do lr do protocolo, por (enc, dataset).
+    """O eta escolhido pela validação ao lado do eta do protocolo, por (enc, dataset).
 
     Para cada lado vêm média e desvio de `acc_val` e de `acc_teste` nas
     sementes. Ver os dois lado a lado é o que responde à pergunta: se a
-    acurácia de teste no lr escolhido não muda em relação à do protocolo
-    além do desvio, a codificação já estava bem treinada com o lr comum.
+    acurácia de teste no eta escolhido não muda em relação à do protocolo
+    além do desvio, a codificação já estava bem treinada com o eta comum.
     """
-    escolhas = escolher_lr(por_treino, lr_protocolo, tolerancia)
+    escolhas = escolher_eta(por_treino, eta_protocolo, tolerancia)
 
     def _agregar(fatia: pd.DataFrame, sufixo: str) -> dict:
         return {
@@ -589,15 +597,15 @@ def resumir_sensibilidade(
             (por_treino["encoding"] == escolha.encoding)
             & (por_treino["dataset"] == escolha.dataset)
         ]
-        no_escolhido = do_par[np.isclose(do_par["lr"], escolha.lr_escolhido)]
-        no_protocolo = do_par[np.isclose(do_par["lr"], lr_protocolo)]
+        no_escolhido = do_par[np.isclose(do_par["eta"], escolha.eta_escolhido)]
+        no_protocolo = do_par[np.isclose(do_par["eta"], eta_protocolo)]
         linhas.append(
             {
                 "encoding": escolha.encoding,
                 "dataset": escolha.dataset,
-                "lr_escolhido": escolha.lr_escolhido,
+                "eta_escolhido": escolha.eta_escolhido,
                 **_agregar(no_escolhido, "escolhido"),
-                "lr_protocolo": lr_protocolo,
+                "eta_protocolo": eta_protocolo,
                 **_agregar(no_protocolo, "protocolo"),
                 "n_sementes": int(no_escolhido["seed"].nunique()),
                 "p": do_par["p"].iloc[0],

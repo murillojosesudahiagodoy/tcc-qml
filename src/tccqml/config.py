@@ -15,13 +15,13 @@ import numpy as np
 
 @dataclass(frozen=True)
 class Protocolo:
-    """Os valores congelados da comparação (Seção 2.2.3.3 + Etapa 9).
+    """Os valores congelados da comparação (Cap. 3, tab:protocolo).
 
     Mudar qualquer campo daqui muda TODOS os experimentos de uma vez, que é o
     ponto: a codificação tem que ser a única coisa que varia.
     """
 
-    # --- dados (Seção 2.5.7) ---
+    # --- dados (Cap. 3, "Conjuntos de dados") ---
     n_samples: int = 300
     noise: float = 0.15
     # Frações do conjunto TOTAL: 60/20/20 -> 180/60/60 com N = 300. A validação
@@ -31,27 +31,27 @@ class Protocolo:
     feature_range: tuple[float, float] = (0.0, np.pi)
     circles_factor: float = 0.4
 
-    # --- ansatz congelado (Seção 2.2.3.4) ---
+    # --- ansatz congelado (Cap. 2, "O ansatz variacional"): L_var = L_var ---
     ansatz: str = "strongly_entangling"
-    n_layers: int = 2
+    L_var: int = 2
 
     # --- otimização ---
     epocas: int = 30
     batch_size: int = 20
-    lr: float = 0.1
+    eta: float = 0.1
     # Verificação de sensibilidade da taxa de aprendizado (`sensibilidade`),
-    # fora da comparação principal, que continua com `lr` para todas. Os
+    # fora da comparação principal, que continua com `eta` para todas. Os
     # candidatos foram fixados ANTES de qualquer execução desta verificação,
     # para a grade não ser ajustada depois de ver resultado, e o orçamento
     # (4 valores x 5 sementes) é o mesmo para todas as codificações: nenhuma
     # ganha mais tentativas que as outras. A escolha entre eles é pela
     # validação; o teste não participa.
-    lr_candidatos: tuple[float, ...] = (0.01, 0.03, 0.1, 0.3)
+    eta_candidatos: tuple[float, ...] = (0.01, 0.03, 0.1, 0.3)
     # Diferença absoluta abaixo da qual duas médias de acc_val empatam na
-    # escolha do lr. Só absorve erro de ponto flutuante: com 60 amostras de
+    # escolha do eta. Só absorve erro de ponto flutuante: com 60 amostras de
     # validação e 5 sementes as médias são múltiplos de 1/300, então médias
     # distintas diferem em pelo menos ~3e-3, muito acima deste limiar.
-    lr_tolerancia_empate: float = 1e-9
+    eta_tolerancia_empate: float = 1e-9
 
     # --- reprodutibilidade ---
     seed: int = 42
@@ -61,15 +61,16 @@ class Protocolo:
     shots: int = 1000
 
     # --- grade de experimentos e varredura ---
-    # Acrescentar uma codificação do Bloco C à comparação é acrescentar uma
+    # Acrescentar uma codificação à comparação é acrescentar uma
     # string aqui, desde que ela esteja registrada em ENCODINGS.
     encodings_grade: tuple[str, ...] = ("angle", "amplitude", "reuploading", "zz")
     datasets_grade: tuple[str, ...] = ("xor", "moons", "circles")
-    L_reup: int = 3
-    L_reup_varredura: tuple[int, ...] = (1, 2, 3, 4, 5)
-    # Controle da varredura de L: angle com k camadas tem o mesmo p = 6k do
-    # re-uploading com L = k, mas o espectro fixo em {-1, 0, 1}.
-    n_layers_varredura: tuple[int, ...] = (1, 2, 3, 4, 5)
+    # Repetições R do data re-uploading.
+    R: int = 3
+    R_varredura: tuple[int, ...] = (1, 2, 3, 4, 5)
+    # Controle da varredura de R: angle com L_var = k camadas tem o mesmo p = 6k
+    # do re-uploading com R = k, mas o espectro fixo em {-1, 0, 1}.
+    L_var_varredura: tuple[int, ...] = (1, 2, 3, 4, 5)
 
     # --- verificações (`verificacoes`): fora da comparação principal ---
     # Hiperparâmetros da regressão logística do controle linear, FIXADOS antes

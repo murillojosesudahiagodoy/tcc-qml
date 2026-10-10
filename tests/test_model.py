@@ -1,4 +1,4 @@
-"""Testes do classificador variacional (Etapas 3 e 8)."""
+"""Testes do classificador variacional."""
 
 import numpy as np
 import pytest
@@ -9,8 +9,8 @@ from tccqml.ansatz import init_weights, weights_shape
 from tccqml.data import load_dataset
 
 
-def _clf(n_layers=2, encoding="angle", **kwargs):
-    return model.build(encoding, n_features=2, n_layers=n_layers, **kwargs)
+def _clf(L_var=2, encoding="angle", **kwargs):
+    return model.build(encoding, n_features=2, L_var=L_var, **kwargs)
 
 
 def test_numero_de_qubits_segue_a_codificacao():
@@ -18,7 +18,7 @@ def test_numero_de_qubits_segue_a_codificacao():
 
 
 def test_amplitude_usa_menos_qubits_que_as_demais():
-    """Não é bug: d atributos cabem em ceil(log2 d) qubits (Seção 2.4.4)."""
+    """Não é bug: d atributos cabem em ceil(log2 d) qubits (Cap. 2, "Amplitude encoding")."""
     assert _clf(encoding="amplitude").n_qubits == 1
 
 
@@ -45,7 +45,7 @@ def test_predicao_e_binaria_e_tem_o_tamanho_certo():
 
 
 def test_contagem_de_parametros_bate_com_o_ansatz():
-    clf = _clf(n_layers=3)
+    clf = _clf(L_var=3)
     esperado = int(np.prod(weights_shape(3, 2)))
 
     assert clf.n_params_circuito == esperado
@@ -55,7 +55,7 @@ def test_contagem_de_parametros_bate_com_o_ansatz():
 def test_p_do_circuito_nao_inclui_o_vies():
     """A ambiguidade entre os dois contadores de parâmetros.
 
-    O `p` das Tabelas 2 e 3 e das Eqs. 2.47/2.48 é 12 na configuração de
+    O `p` do texto e das contagens de custo é 12 na configuração de
     referência: só o circuito. O viés é somado depois da medição e sua derivada
     é clássica, então ele não entra em nenhuma fórmula de custo — mas continua
     sendo um parâmetro treinável do modelo, e daí os 13.
@@ -74,8 +74,8 @@ def test_nenhuma_codificacao_do_nucleo_tem_parametros_proprios(encoding):
 
 
 def test_reuploading_tem_p_ditado_pelo_numero_de_blocos():
-    """L_reup é independente do n_layers do ansatz (a codificação é interleaved)."""
-    clf = _clf(n_layers=2, encoding="reuploading", enc_kwargs={"L_reup": 4})
+    """R é independente do L_var do ansatz (a codificação é interleaved)."""
+    clf = _clf(L_var=2, encoding="reuploading", enc_kwargs={"R": 4})
 
     assert clf.interleaved
     assert clf.weights_shape == (4, 2, 3)
@@ -84,7 +84,7 @@ def test_reuploading_tem_p_ditado_pelo_numero_de_blocos():
 
 def test_pesos_iniciais_sao_pequenos():
     """Inicialização grande em circuito profundo cai em barren plateau."""
-    w = init_weights(n_layers=4, n_qubits=2, seed=1)
+    w = init_weights(L_var=4, n_qubits=2, seed=1)
     assert float(pnp.max(pnp.abs(w))) < 1.0
 
 
