@@ -1,10 +1,9 @@
 """Gera `tcc_qml_executado.ipynb`, a cópia de leitura de `tcc_qml.ipynb`.
 
 A cópia é o notebook interativo executado de cima a baixo com RODAR = False,
-RODAR_TESTES = False e USAR_WIDGETS = False (widgets não aparecem no GitHub; as
-células alternativas, sim), com todas as saídas gravadas. Lê os resultados
-versionados em results/ e não roda nenhum experimento; só o treino de exemplo
-da seção 3, que leva segundos e grava em results/notebook/.
+com todas as saídas gravadas. Lê os resultados versionados em results/ e não
+roda nenhum experimento; só o treino de exemplo da seção 3, que leva segundos e
+grava em results/notebook/.
 
 Uso, da raiz do repositório e com o ambiente ativado:
 
@@ -27,27 +26,24 @@ PASTA = Path(__file__).resolve().parent
 ORIGEM = PASTA / "tcc_qml.ipynb"
 DESTINO = PASTA / "tcc_qml_executado.ipynb"
 
-PARAMETROS = {"RODAR": "False", "RODAR_TESTES": "False", "USAR_WIDGETS": "False"}
+PARAMETROS = {"RODAR": "False"}
 
 AVISO = """\
 > **Versão executada, só para leitura.** Gerada a partir de
 > [`tcc_qml.ipynb`](tcc_qml.ipynb) por `python notebooks/gerar_executado.py`, com
-> `RODAR = False`, `RODAR_TESTES = False` e `USAR_WIDGETS = False`: nenhum experimento roda
-> aqui, as tabelas e figuras são as de `results/`, e os painéis dão lugar às células
-> alternativas. Para rodar ou mexer, abra o `tcc_qml.ipynb`. Não edite este arquivo: ele é
+> `RODAR = False`: nenhum experimento roda aqui, e as tabelas e figuras são as de
+> `results/`. Para rodar ou mexer, abra o `tcc_qml.ipynb`. Não edite este arquivo: ele é
 > sobrescrito a cada geração."""
 
 
 def fixar_parametros(nb) -> None:
-    celula = next(c for c in nb.cells if c.get("id") == "c02")
-    fonte = celula.source
+    # Cada parâmetro tem que aparecer exatamente uma vez, numa célula de código.
     for nome, valor in PARAMETROS.items():
-        fonte, n = re.subn(
-            rf"^{nome}(\s*)=\s*\w+", rf"{nome}\g<1>= {valor}", fonte, flags=re.MULTILINE
-        )
-        if n != 1:
-            raise SystemExit(f"parâmetro {nome} não encontrado na célula de parâmetros (c02)")
-    celula.source = fonte
+        padrao = re.compile(rf"^{nome}(\s*)=\s*\w+", flags=re.MULTILINE)
+        celulas = [c for c in nb.cells if c.cell_type == "code" and padrao.search(c.source)]
+        if len(celulas) != 1:
+            raise SystemExit(f"parâmetro {nome} não encontrado (ou repetido) no notebook")
+        celulas[0].source = padrao.sub(rf"{nome}\g<1>= {valor}", celulas[0].source)
 
 
 def caminhos_pessoais(nb) -> list[str]:
