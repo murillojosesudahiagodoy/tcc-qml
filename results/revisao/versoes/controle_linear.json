@@ -1,0 +1,24 @@
+{
+  "commit": "8d467e746ed2563274ca9643a6a653a1540f80c6",
+  "arvore_com_alteracoes": true,
+  "script": "experiments/revisao/controle_linear.py",
+  "comando": "python.exe experiments/revisao/controle_linear.py",
+  "data": "2026-10-21T23:27:55+00:00",
+  "saidas": [
+    "results/revisao/metrics/controle_linear_C.csv",
+    "results/revisao/metrics/resumo_controle_linear_C.csv",
+    "results/revisao/tables/tab_controle_linear_C.tex"
+  ],
+  "C_candidatos": [
+    0.01,
+    0.1,
+    1.0,
+    10.0,
+    100.0
+  ],
+  "escolhas": {
+    "circles": 1.0,
+    "moons": 100.0,
+    "xor": 100.0
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "commit": "8d467e746ed2563274ca9643a6a653a1540f80c6",
+  "arvore_com_alteracoes": true,
+  "script": "C:\\Users\\muril\\projetos\\tcc-qml\\experiments\\revisao\\sementes_novas.py",
+  "comando": "python.exe experiments/revisao/sementes_novas.py",
+  "data": "2026-10-17T16:54:57",
+  "saidas": [
+    "results/revisao/metrics/diferenca_pareada_sementes_novas.csv",
+    "results/revisao/metrics/resumo_diferenca_pareada_sementes_novas.csv",
+    "results/revisao/metrics/resumo_sementes_novas.csv",
+    "results/revisao/metrics/sementes_novas.csv",
+    "results/revisao/tables/tab_sementes_novas.tex"
+  ],
+  "sementes": [
+    47,
+    48,
+    49,
+    50,
+    51
+  ],
+  "treinos": 115
+}

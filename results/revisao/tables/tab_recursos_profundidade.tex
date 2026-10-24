@@ -1,0 +1,31 @@
+\begin{table}[htb]
+\centering
+\small
+\caption[Recursos por codificação e profundidade]{Recursos do circuito compilado e custo de um passo de otimização em \textit{hardware}, por codificação e por profundidade ($k = L_\text{var}$ no \textit{angle}, $k = R$ no \textit{re-uploading}).}
+\label{tab:recursos-profundidade}
+\begin{tabular}{lcccccc}
+\toprule
+Codificação & $k$ & $p$ & Profundidade & CNOTs & Aval./passo & \textit{Shots}/passo \\
+\midrule
+\textit{Angle} & 1 & 6 & 6 & 2 & 260 & 260\,000 \\
+ & 2 & 12 & 11 & 4 & 500 & 500\,000 \\
+ & 3 & 18 & 16 & 6 & 740 & 740\,000 \\
+ & 4 & 24 & 21 & 8 & 980 & 980\,000 \\
+ & 5 & 30 & 26 & 10 & 1220 & 1\,220\,000 \\
+\midrule
+\textit{Re-uploading} & 1 & 6 & 6 & 2 & 260 & 260\,000 \\
+ & 2 & 12 & 12 & 4 & 500 & 500\,000 \\
+ & 3 & 18 & 18 & 6 & 740 & 740\,000 \\
+ & 4 & 24 & 24 & 8 & 980 & 980\,000 \\
+ & 5 & 30 & 30 & 10 & 1220 & 1\,220\,000 \\
+\midrule
+\textit{Amplitude} & -- & 6 & 8 & 0 & 260 & 260\,000 \\
+\midrule
+\textit{Feature map} ZZ & -- & 12 & 20 & 8 & 500 & 500\,000 \\
+\bottomrule
+\end{tabular}
+\\[2pt]
+{\footnotesize Profundidade e CNOTs: circuito completo, decomposto em portas básicas como na Tabela~\ref{tab:custo}. Aval./passo: $(2p + 1)|B|$; \textit{Shots}/passo: $(2p + 1)|B|S$, com $|B| = 20$ e $S = 1000$. \textit{Amplitude} e ZZ com o \textit{ansatz} de referência ($L_\text{var} = 2$). Gerada por código (\texttt{circuit\_stats.stats}).}
+\\[2pt]
+{\footnotesize Fonte: Elaborada pelo autor.}
+\end{table}

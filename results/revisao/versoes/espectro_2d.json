@@ -1,0 +1,17 @@
+{
+  "commit": "8d467e746ed2563274ca9643a6a653a1540f80c6",
+  "arvore_com_alteracoes": true,
+  "script": "experiments/revisao/espectro_2d.py",
+  "comando": "python.exe experiments/revisao/espectro_2d.py",
+  "data": "2026-10-21T23:28:28+00:00",
+  "saidas": [
+    "results/revisao/figures/espectro-2d.pdf",
+    "results/revisao/metrics/coeficientes_espectro_2d.csv",
+    "results/revisao/metrics/espectro_2d.csv",
+    "results/revisao/metrics/resumo_espectro_2d.csv",
+    "results/revisao/tables/tab_espectro_2d.tex"
+  ],
+  "limiar": 1e-06,
+  "limiar_relativo": 0.01,
+  "n_grade": 32
+}

@@ -1,0 +1,17 @@
+{
+  "commit": "8d467e746ed2563274ca9643a6a653a1540f80c6",
+  "arvore_com_alteracoes": true,
+  "script": "experiments/revisao/curvas.py",
+  "comando": "python.exe experiments/revisao/curvas.py",
+  "data": "2026-10-21T23:28:12+00:00",
+  "saidas": [
+    "results/revisao/figures/curvas-profundidade.pdf",
+    "results/revisao/figures/curvas-treinamento-sementes.pdf",
+    "results/revisao/metrics/oscilacoes.csv",
+    "results/revisao/metrics/treino_teste_profundidade.csv",
+    "results/revisao/tables/tab_treino_teste_profundidade.tex"
+  ],
+  "janela": 10,
+  "limiar_oscilacao": 0.05,
+  "limiar_oscilacao_treino": 0.1
+}

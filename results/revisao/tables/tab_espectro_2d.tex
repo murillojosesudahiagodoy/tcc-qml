@@ -1,0 +1,30 @@
+\begin{table}[htb]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\caption[Frequências permitidas, alcançáveis e usadas]{Termos $(\omega_1, \omega_2)$ do espectro de $f_\theta$: permitidos pela codificação (Tabela~\ref{tab:espectros}), alcançados pela arquitetura (inicialização $\times 3$) e presentes nos modelos treinados.}
+\label{tab:espectro-2d}
+\begin{tabular}{lccccccc}
+\toprule
+ & & & & & & \multicolumn{2}{c}{Treinados (15 modelos)} \\
+\cmidrule(lr){7-8}
+Codificação & $k$ & $p$ & Permitidos & Alcançáveis & $\omega_{\max}$ ($x_1$; $x_2$) & $> 10^{-6}$ & $\geq 1\%$ do máx. \\
+\midrule
+\textit{Angle} & 1 & 6 & 9 & 2 & 0; 1 & 2 & 2,0 (2--2) \\
+ & 2 & 12 & 9 & 6 & 1; 1 & 6 & 5,7 (4--6) \\
+ & 3 & 18 & 9 & 8 & 1; 1 & 8 & 7,2 (6--8) \\
+ & 4 & 24 & 9 & 8 & 1; 1 & 8 & 7,7 (6--8) \\
+ & 5 & 30 & 9 & 8 & 1; 1 & 8 & 7,7 (6--8) \\
+\midrule
+\textit{Re-uploading} & 1 & 6 & 9 & 2 & 0; 1 & 2 & 2,0 (2--2) \\
+ & 2 & 12 & 25 & 10 & 1; 2 & 10 & 9,9 (8--10) \\
+ & 3 & 18 & 49 & 35 & 2; 3 & 35 & 34,0 (27--35) \\
+ & 4 & 24 & 81 & 63 & 3; 4 & 63 & 60,9 (53--63) \\
+ & 5 & 30 & 121 & 99 & 4; 5 & 99 & 94,6 (81--99) \\
+\bottomrule
+\end{tabular}
+\\[2pt]
+{\footnotesize $k$: $L_\text{var}$ no \textit{angle} e $R$ no \textit{re-uploading}. FFT 2D de $f_\theta = \expval{Z_0}$, sem o viés $b$, numa grade de $32 \times 32$ pontos em $[0, 2\pi)^2$, dividida por $32^2$; um termo conta como presente se $|c_\omega| > 10^{-6}$. Alcançáveis: parâmetros iniciais da semente 42 multiplicados por 3. Treinados: três conjuntos $\times$ cinco sementes, parâmetros da época escolhida; última coluna: média (mínimo--máximo) dos termos com $|c_\omega|$ de pelo menos 1\% do maior coeficiente com $\omega \neq (0, 0)$.}
+\\[2pt]
+{\footnotesize Fonte: Elaborada pelo autor.}
+\end{table}

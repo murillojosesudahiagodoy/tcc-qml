@@ -1,0 +1,17 @@
+{
+  "commit": "8d467e746ed2563274ca9643a6a653a1540f80c6",
+  "arvore_com_alteracoes": true,
+  "script": "C:\\Users\\muril\\projetos\\tcc-qml\\experiments\\revisao\\controle_otimizacao.py",
+  "comando": "python.exe experiments/revisao/controle_otimizacao.py",
+  "data": "2026-10-17T16:21:28",
+  "saidas": [
+    "results/revisao/metrics/conferencia_otimizacao.csv",
+    "results/revisao/metrics/controle_otimizacao.csv",
+    "results/revisao/metrics/historico_controle_otimizacao.csv",
+    "results/revisao/metrics/resumo_controle_otimizacao.csv",
+    "results/revisao/metrics/validacao_controle_otimizacao.csv",
+    "results/revisao/tables/tab_controle_otimizacao.tex"
+  ],
+  "treinos": 480,
+  "max_dif_v100": 1.1102230246251565e-16
+}

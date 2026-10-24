@@ -1,0 +1,12 @@
+{
+  "commit": "8d467e746ed2563274ca9643a6a653a1540f80c6",
+  "arvore_com_alteracoes": true,
+  "script": "experiments/revisao/diferenca_pareada.py",
+  "comando": "python.exe experiments/revisao/diferenca_pareada.py",
+  "data": "2026-10-21T23:27:42+00:00",
+  "saidas": [
+    "results/revisao/figures/diferenca-pareada.pdf",
+    "results/revisao/metrics/diferenca_pareada.csv",
+    "results/revisao/metrics/resumo_diferenca_pareada.csv"
+  ]
+}

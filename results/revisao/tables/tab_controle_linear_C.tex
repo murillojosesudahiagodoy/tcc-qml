@@ -1,0 +1,21 @@
+\begin{table}[htb]
+\centering
+\small
+\caption[Controle linear com regularização escolhida pela validação]{Regressão logística sobre as nove funções da Eq.~\eqref{eq:base-9}, com $C$ escolhido em $\{0{,}01;\ 0{,}1;\ 1;\ 10;\ 100\}$ pela maior acurácia média de validação (média $\pm$ desvio padrão sobre cinco sementes).}
+\label{tab:controle-linear-C}
+\begin{tabular}{lccccc}
+\toprule
+ & & \multicolumn{3}{c}{$C$ escolhido} & $C = 1$ \\
+\cmidrule(lr){3-5} \cmidrule(lr){6-6}
+Conjunto & $C$ & Treino & Validação & Teste & Teste \\
+\midrule
+\textit{Xor} & 100 & 0,902 $\pm$ 0,016 & 0,873 $\pm$ 0,009 & 0,880 $\pm$ 0,056 & 0,873 $\pm$ 0,045 \\
+\textit{Moons} & 100 & 0,899 $\pm$ 0,023 & 0,897 $\pm$ 0,043 & 0,857 $\pm$ 0,040 & 0,850 $\pm$ 0,039 \\
+\textit{Circles} & 1 & 0,973 $\pm$ 0,002 & 0,983 $\pm$ 0,020 & 0,963 $\pm$ 0,022 & 0,963 $\pm$ 0,022 \\
+\bottomrule
+\end{tabular}
+\\[2pt]
+{\footnotesize Mesmas partições e sementes da comparação principal; o teste não participa da escolha de $C$. Empate na validação: fica $C = 1$, se empatado; senão, o menor $C$. A coluna $C = 1$ repete o controle da Tabela~\ref{tab:verificacoes}.}
+\\[2pt]
+{\footnotesize Fonte: Elaborada pelo autor.}
+\end{table}

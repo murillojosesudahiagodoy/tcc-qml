@@ -1,0 +1,30 @@
+\begin{table}[htb]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\caption[Controle de otimização]{Controle de otimização: $\eta \in \{0{,}01;\ 0{,}03;\ 0{,}1;\ 0{,}3\}$ e 30 ou 100 épocas, com a combinação escolhida pela maior acurácia média de validação (média $\pm$ desvio padrão sobre as sementes 42 a 46).}
+\label{tab:controle-otimizacao}
+\begin{tabular}{llcccccc}
+\toprule
+Conjunto & Codificação & $k$ & $\eta$; épocas & Validação (escolhida) & Teste, protocolo & Teste, escolhida \\
+\midrule
+\textit{Circles} & \textit{Angle} & 4 & 0,03; 100 & 0,990 $\pm$ 0,022 & 0,933 $\pm$ 0,024 & 0,973 $\pm$ 0,025 \\
+\textit{Circles} & \textit{Angle} & 5 & 0,10; 30 & 0,990 $\pm$ 0,022 & 0,943 $\pm$ 0,035 & 0,943 $\pm$ 0,035 \\
+\midrule
+\textit{Moons} & \textit{Angle} & 1 & 0,30; 100 & 0,877 $\pm$ 0,038 & 0,807 $\pm$ 0,069 & 0,800 $\pm$ 0,050 \\
+\textit{Moons} & \textit{Angle} & 2 & 0,30; 100 & 0,910 $\pm$ 0,042 & 0,847 $\pm$ 0,032 & 0,847 $\pm$ 0,059 \\
+\textit{Moons} & \textit{Angle} & 3 & 0,30; 100 & 0,913 $\pm$ 0,043 & 0,843 $\pm$ 0,053 & 0,847 $\pm$ 0,030 \\
+\textit{Moons} & \textit{Angle} & 4 & 0,30; 100 & 0,910 $\pm$ 0,049 & 0,843 $\pm$ 0,035 & 0,830 $\pm$ 0,036 \\
+\textit{Moons} & \textit{Angle} & 5 & 0,30; 100 & 0,913 $\pm$ 0,043 & 0,847 $\pm$ 0,051 & 0,823 $\pm$ 0,040 \\
+\textit{Moons} & \textit{Re-upl.} & 1 & 0,30; 100 & 0,877 $\pm$ 0,038 & 0,807 $\pm$ 0,069 & 0,800 $\pm$ 0,050 \\
+\textit{Moons} & \textit{Re-upl.} & 2 & 0,30; 30 & 0,913 $\pm$ 0,043 & 0,860 $\pm$ 0,043 & 0,850 $\pm$ 0,026 \\
+\textit{Moons} & \textit{Re-upl.} & 3 & 0,10; 100 & 0,950 $\pm$ 0,041 & 0,890 $\pm$ 0,045 & 0,890 $\pm$ 0,045 \\
+\textit{Moons} & \textit{Re-upl.} & 4 & 0,30; 30 & 0,980 $\pm$ 0,027 & 0,930 $\pm$ 0,032 & 0,927 $\pm$ 0,032 \\
+\textit{Moons} & \textit{Re-upl.} & 5 & 0,30; 30 & 0,997 $\pm$ 0,007 & 0,953 $\pm$ 0,025 & 0,960 $\pm$ 0,035 \\
+\bottomrule
+\end{tabular}
+\\[2pt]
+{\footnotesize $k$: $L_\text{var}$ no \textit{angle} e $R$ no \textit{re-uploading} (mesmo $p = 6k$). Protocolo: $\eta = 0{,}1$ e 30 épocas. Mesmo orçamento de seleção para todas as configurações (8 combinações $\times$ 5 sementes); o teste não participa da escolha. Empate na validação: fica o protocolo, se empatado; senão, menos épocas e menor $\eta$.}
+\\[2pt]
+{\footnotesize Fonte: Elaborada pelo autor.}
+\end{table}
