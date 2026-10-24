@@ -23,6 +23,10 @@ results/*
 !results/tables/
 !results/figures/
 !results/weights/
+# Saídas de experiments/revisao/, versionadas à parte para não sobrescrever nada
+# da v1.0.0. Os logs de execução ficam fora.
+!results/revisao/
+results/revisao/logs/
 # Sobras dos notebooks antigos, que nenhum subcomando grava.
 results/figures/notebook/
 # Saídas do treino interativo do notebook: nunca são resultado oficial.
@@ -32,6 +36,7 @@ results/notebook/
 # trabalho, nao para quem clona e quer rodar. Ficam so na maquina do autor.
 docs/*
 !docs/.gitkeep
+texto/
 
 # Sistema / editor
 .DS_Store

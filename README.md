@@ -163,6 +163,61 @@ a coluna de dificuldade de implementação é julgamento, não medição. Mesmo 
 edita no `.tex`, que `tabelas` sobrescreve: o texto vive na lista `QUALITATIVA`, em
 [`tabelas.py`](src/tccqml/tabelas.py), e é lá que se revisa.
 
+## Análises complementares (`experiments/revisao/`)
+
+As análises feitas depois dos resultados da versão 1.0.0 (Cap. 3, "Escolhas anteriores e
+posteriores aos resultados") ficam em scripts curtos em
+[`experiments/revisao/`](experiments/revisao/), que **importam** o código de `tccqml` (dados,
+treino, espectro, contagem de recursos) sem alterá-lo. Tudo o que eles gravam vai para
+`results/revisao/`; nenhum CSV, peso ou figura da versão 1.0.0 é sobrescrito.
+
+Na ordem (cada script que treina aceita `--rapido`, para validar com 1 semente e 3 épocas
+sem gravar nada):
+
+```bash
+python experiments/revisao/diferenca_pareada.py     # diferença pareada; só lê os CSVs da v1.0.0
+python experiments/revisao/historicos_varredura.py  # varreduras com histórico e pesos: 150 treinos (~10 min)
+python experiments/revisao/curvas.py                # curvas por semente, oscilações, treino e teste por k
+python experiments/revisao/controle_linear.py       # controle linear com C pela validação: segundos
+python experiments/revisao/controle_otimizacao.py   # eta x épocas: 480 treinos (~1 h)
+python experiments/revisao/sementes_novas.py        # sementes 47-51; usa a escolha do anterior
+python experiments/revisao/espectro_2d.py           # espectro 2D; usa os pesos de historicos_varredura
+python experiments/revisao/recursos.py              # recursos por k: segundos
+python experiments/revisao/particoes.py             # partições e verificações do pré-processamento
+```
+
+Os scripts que treinam usam `concurrent.futures` com um processo por núcleo, menos um.
+Os tempos acima são de parede, na máquina do autor (8 núcleos, 7 processos).
+
+**Versão do código.** Toda saída registra o commit que a gerou: os CSVs têm a coluna
+`commit`, os PDFs levam o hash nos metadados (`Subject`), os `.npz` guardam o campo
+`commit`, e cada script grava `results/revisao/versoes/<script>.json` com o hash, se `src/`
+ou `experiments/` tinham alterações não commitadas, o comando e a lista de arquivos
+gerados. O hash é lido com `git rev-parse HEAD`, só leitura.
+
+**Partições.** `results/revisao/particoes/<dataset>_<semente>.npz` guarda, para as sementes
+42–51, os pontos antes da normalização, os rótulos, os índices de treino, validação e teste
+e os extremos do MinMaxScaler; `particoes.py` confere que eles reproduzem `load_dataset`
+exatamente.
+
+| Artefato (`results/revisao/`) | Script | Entradas |
+|---|---|---|
+| `figures/diferenca-pareada.pdf`, `metrics/diferenca_pareada.csv`, `metrics/resumo_diferenca_pareada.csv` | `diferenca_pareada.py` | `results/metrics/varredura_R.csv`, `varredura_L_var.csv` |
+| `metrics/historico_varredura.csv`, `metrics/por_treino_varredura.csv`, `weights/varredura/*.npz`, `metrics/conferencia_varredura.csv` | `historicos_varredura.py` | treino (`tccqml.experiments.rodar_um`); conferência contra `varredura_R.csv` e `varredura_L_var.csv` |
+| `figures/curvas-treinamento-sementes.pdf` | `curvas.py` | `results/metrics/comparacao.csv` |
+| `figures/curvas-profundidade.pdf` | `curvas.py` | `metrics/historico_varredura.csv` |
+| `tables/tab_treino_teste_profundidade.tex`, `metrics/treino_teste_profundidade.csv` | `curvas.py` | `results/metrics/varredura_R.csv`, `varredura_L_var.csv` |
+| `metrics/oscilacoes.csv` | `curvas.py` | `comparacao.csv`, `por_treino.csv`, `metrics/historico_varredura.csv` |
+| `tables/tab_controle_linear_C.tex`, `metrics/controle_linear_C.csv`, `metrics/resumo_controle_linear_C.csv` | `controle_linear.py` | dados gerados por `load_dataset` (sementes 42–46) |
+| `tables/tab_controle_otimizacao.tex`, `metrics/controle_otimizacao.csv`, `metrics/resumo_controle_otimizacao.csv`, `metrics/validacao_controle_otimizacao.csv`, `metrics/historico_controle_otimizacao.csv`, `metrics/conferencia_otimizacao.csv` | `controle_otimizacao.py` | treino; conferência contra `varredura_*.csv` e `sensibilidade_eta.csv` |
+| `tables/tab_sementes_novas.tex`, `metrics/sementes_novas.csv`, `metrics/resumo_sementes_novas.csv`, `metrics/*diferenca_pareada_sementes_novas.csv` | `sementes_novas.py` | `metrics/resumo_controle_otimizacao.csv`; treino com sementes 47–51 |
+| `figures/espectro-2d.pdf`, `tables/tab_espectro_2d.tex`, `metrics/espectro_2d.csv`, `metrics/resumo_espectro_2d.csv`, `metrics/coeficientes_espectro_2d.csv` | `espectro_2d.py` | `weights/varredura/*.npz` |
+| `tables/tab_recursos_profundidade.tex`, `metrics/recursos_profundidade.csv` | `recursos.py` | `tccqml.circuit_stats.stats` |
+| `particoes/*.npz`, `metrics/verificacao_particoes.csv` | `particoes.py` | dados gerados por `load_dataset` (sementes 42–51) |
+
+As figuras e tabelas citadas no texto são copiadas, sem edição, de `results/revisao/figures/`
+e `results/revisao/tables/` para `figuras/revisao/` e `tabelas/revisao/` do projeto LaTeX.
+
 ## O protocolo congelado
 
 Vive inteiro em [`src/tccqml/config.py`](src/tccqml/config.py), e é a fonte fiel para
@@ -258,6 +313,9 @@ results/tables/     .tex (e .csv) para o Overleaf
 results/figures/    .pdf para o Overleaf
 results/weights/    pesos finais da grade (.npz), de onde saem as fronteiras
                     (as quatro pastas são versionadas; results/notebook/, não)
+experiments/revisao/  scripts das análises complementares (importam tccqml)
+results/revisao/    o que eles gravam: metrics, tables, figures, weights,
+                    particoes e versoes (versionado; logs/, não)
 docs/               reservado para documentação (o conteúdo atual é local,
                     inclusive o texto do TCC em .pdf)
 ```
