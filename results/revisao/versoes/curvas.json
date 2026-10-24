@@ -1,9 +1,9 @@
 {
-  "commit": "8d467e746ed2563274ca9643a6a653a1540f80c6",
-  "arvore_com_alteracoes": true,
+  "commit": "90f084230da7d2f12688a86b0bd136dd3a62ff9c",
+  "arvore_com_alteracoes": false,
   "script": "experiments/revisao/curvas.py",
   "comando": "python.exe experiments/revisao/curvas.py",
-  "data": "2026-10-21T23:28:12+00:00",
+  "data": "2026-10-24T15:52:17+00:00",
   "saidas": [
     "results/revisao/figures/curvas-profundidade.pdf",
     "results/revisao/figures/curvas-treinamento-sementes.pdf",

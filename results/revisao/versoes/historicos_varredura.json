@@ -1,9 +1,9 @@
 {
-  "commit": "8d467e746ed2563274ca9643a6a653a1540f80c6",
-  "arvore_com_alteracoes": true,
-  "script": "C:\\Users\\muril\\projetos\\tcc-qml\\experiments\\revisao\\historicos_varredura.py",
+  "commit": "90f084230da7d2f12688a86b0bd136dd3a62ff9c",
+  "arvore_com_alteracoes": false,
+  "script": "experiments/revisao/historicos_varredura.py",
   "comando": "python.exe experiments/revisao/historicos_varredura.py",
-  "data": "2026-10-17T15:04:09",
+  "data": "2026-10-24T15:51:59+00:00",
   "saidas": [
     "results/revisao/metrics/conferencia_varredura.csv",
     "results/revisao/metrics/historico_varredura.csv",
