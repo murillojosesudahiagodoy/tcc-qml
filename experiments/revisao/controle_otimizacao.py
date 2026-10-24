@@ -210,7 +210,9 @@ def main() -> None:
     por_treino = pd.DataFrame([s["resumo"] for s in saidas]).sort_values(
         [*CHAVES, "eta", "epocas", "seed"]
     )
-    hist = pd.concat([s["hist"] for s in saidas], ignore_index=True)
+    hist = pd.concat([s["hist"] for s in saidas], ignore_index=True).sort_values(
+        [*CHAVES, "eta", "epocas", "seed", "epoca"]
+    )
     escolhas = escolher(por_treino)
     resumo = resumir(por_treino, escolhas)
     validacao = por_treino.groupby([*CHAVES, "eta", "epocas"], as_index=False)[
