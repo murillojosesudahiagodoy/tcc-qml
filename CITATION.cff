@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "Se usar este código ou estes resultados, cite a monografia abaixo."
+title: "tcc-qml: codificação de dados clássicos em classificadores quânticos variacionais"
+type: software
+authors:
+  - family-names: Godoy
+    given-names: Murillo José Sudahia
+version: 1.1.0
+license: MIT
+repository-code: "https://github.com/murillojosesudahiagodoy/tcc-qml"
+keywords:
+  - quantum machine learning
+  - variational quantum classifier
+  - data encoding
+  - expressivity
+  - state preparation cost
+preferred-citation:
+  type: thesis
+  title: "Codificação de dados clássicos em modelos de Quantum Machine Learning: expressividade, desempenho e custo de preparação em classificadores quânticos variacionais"
+  authors:
+    - family-names: Godoy
+      given-names: Murillo José Sudahia
+  thesis-type: "Trabalho de Conclusão de Curso (Bacharelado em Engenharia Física)"
+  institution:
+    name: Universidade Federal de São Carlos
+    city: São Carlos
+  year: 2026
