@@ -16,8 +16,8 @@ Duas decisões que mudam os números e por isso ficam explícitas:
 
 2. **As métricas de gradiente são analíticas, não medidas.** O treino roda em
    `default.qubit` com retropropagação, que não paga o custo do
-   parameter-shift (Cap. 2, "regra de deslocamento de parâmetro"). As
-   contagens descrevem o que o MESMO
+   parameter-shift (Cap. 2, "Cálculo do gradiente: a regra de deslocamento de
+   parâmetro"). As contagens descrevem o que o MESMO
    treino custaria em hardware real, e é isso que o TCC reporta: 2p + 1
    avaliações por amostra (as 2p deslocadas do parameter-shift mais a do resíduo
    f(x) + b - y), (2p + 1)|B| avaliações e (2p + 1)|B|S shots por passo.
@@ -128,7 +128,8 @@ def aval_gradiente_amostra(n_params_circuito: int) -> int:
     O gradiente de (f(x) + b - y)^2 é 2 (f(x) + b - y) df/dtheta: as 2p
     avaliações deslocadas dão df/dtheta, mas o resíduo exige f(x) no ponto
     sem deslocamento — uma avaliação a mais por amostra. É a contagem
-    (2p + 1)|B| que o texto usa (Cap. 2, "regra de deslocamento de parâmetro").
+    (2p + 1)|B| que o texto usa (Cap. 2, "Cálculo do gradiente: a regra de
+    deslocamento de parâmetro").
     """
     return aval_derivadas_amostra(n_params_circuito) + 1
 

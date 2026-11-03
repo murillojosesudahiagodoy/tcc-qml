@@ -379,25 +379,29 @@ def experimento(nome: str) -> None:
         mostrar_figura(figura)
 
 
+# Onde cada saída de `tabelas` e `figuras` entra no texto final, pelo nome da seção e pelo
+# rótulo LaTeX. As que ficaram fora do texto continuam sendo geradas, para conferência.
 ONDE_NO_TCC = {
     "tab_acuracia": "Cap. 4 › Comparação principal (tab:acuracia)",
-    "tab_custo": "Cap. 4 › Verificações dos circuitos e desempenho × recursos (tab:custo)",
-    "tab_espectro": "Cap. 4 › Verificações dos circuitos: espectro medido (tab:espectro)",
-    "tab_ablacao": "Cap. 4 › Controles: ablação do entrelaçamento (tab:ablacao)",
-    "tab_diagnostico": "Cap. 4 › Controles: normalização no amplitude (tab:diagnostico)",
-    "tab_mesmo_p": "Cap. 4 › Controles: varredura de R com o mesmo p (tab:mesmo-p)",
-    "tab_sensibilidade": "Cap. 4 › Controles: sensibilidade à taxa de aprendizado (tab:sensibilidade)",
-    "tab_verificacoes": "Cap. 4 › Controles: verificações independentes do treino (tab:verificacoes)",
-    "tab_qualitativa": "opcional no Cap. 4 (o texto vive em tabelas.QUALITATIVA)",
-    "datasets.pdf": "Cap. 3 › Conjuntos de dados (sugestão: fig:datasets)",
-    "fronteiras-aprendidas.pdf": "Cap. 4 › Comparação principal, semente 42 (sugestão: fig:fronteiras)",
-    "curvas-treinamento.pdf": "Cap. 4 › Comparação principal (sugestão: fig:curvas)",
-    "acuracia-vs-custo.pdf": "Cap. 4 › Desempenho × recursos (sugestão: fig:acc-custo)",
-    "custo-por-codificacao.pdf": "opcional; repete a tab:custo em barras",
-    "acuracia-vs-R.pdf": "Cap. 4 › Controles: varredura de R (sugestão: fig:acc-R)",
-    "espectro-reuploading.pdf": "Cap. 4 › Verificações dos circuitos: espectro (sugestão: fig:espectro)",
-    "sensibilidade-eta.pdf": "Cap. 4 › Controles: sensibilidade a η (sugestão: fig:sensibilidade)",
-    "limiar-circles.pdf": "Cap. 4 › Controles: limiar de g no circles, semente 42 (sugestão: fig:limiar)",
+    "tab_custo": "Cap. 4 › Contagem de recursos (tab:custo)",
+    "tab_espectro": "Cap. 4 › Espectro medido (tab:espectro)",
+    "tab_ablacao": "Cap. 4 › Ablação do entrelaçamento (tab:ablacao)",
+    "tab_diagnostico": "Cap. 4 › Diagnóstico da normalização no amplitude (tab:diagnostico)",
+    "tab_mesmo_p": "Cap. 4 › Varredura de R e controle de mesmo p (tab:mesmo-p)",
+    "tab_sensibilidade": "Cap. 4 › Sensibilidade à taxa de aprendizado (tab:sensibilidade)",
+    "tab_verificacoes": "Cap. 4 › Verificações independentes do treino (tab:verificacoes)",
+    "tab_qualitativa": "fora do texto final; julgamento do autor, em tabelas.QUALITATIVA",
+    "datasets.pdf": "fora do texto final; ilustra o Cap. 3 › Conjuntos de dados",
+    "fronteiras-aprendidas.pdf": "Cap. 4 › Comparação principal, semente 42 (fig:fronteiras)",
+    "curvas-treinamento.pdf": "fora do texto final; fig:curvas usa a versão por semente, "
+                              "results/revisao/figures/curvas-treinamento-sementes.pdf",
+    "acuracia-vs-custo.pdf": "Cap. 4 › Desempenho e recursos (fig:acuracia-custo)",
+    "custo-por-codificacao.pdf": "fora do texto final; repete a tab:custo em barras",
+    "acuracia-vs-R.pdf": "fora do texto final; os mesmos números estão na tab:mesmo-p",
+    "espectro-reuploading.pdf": "fora do texto final; o espectro entra pela tab:espectro, "
+                                "tab:espectro-2d e fig:espectro-2d",
+    "sensibilidade-eta.pdf": "fora do texto final; os mesmos números estão na tab:sensibilidade",
+    "limiar-circles.pdf": "fora do texto final; o limiar entra pela tab:verificacoes",
 }
 
 

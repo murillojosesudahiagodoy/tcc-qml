@@ -7,8 +7,8 @@ otimizador, ao ansatz ou aos dados.
 
 O treino usa `default.qubit` com retropropagação. O parameter-shift NÃO é
 executado — ele é contabilizado analiticamente em `circuit_stats.py`
-(Cap. 2, "regra de deslocamento de parâmetro"). As colunas de custo de
-gradiente que saem nos CSVs são,
+(Cap. 2, "Cálculo do gradiente: a regra de deslocamento de parâmetro"). As
+colunas de custo de gradiente que saem nos CSVs são,
 portanto, o custo que este mesmo treino teria em hardware real.
 """
 
@@ -28,7 +28,8 @@ from tccqml.data import load_dataset
 from tccqml.train import treinar
 
 # Recursos do circuito completo e, separadamente, do bloco de codificação
-# (Cap. 3, "Métricas"): qubits, profundidade, portas totais e portas de dois qubits.
+# (Cap. 3, "Métricas e critério de análise"): qubits, profundidade, portas totais e
+# portas de dois qubits.
 COLUNAS_CUSTO = (
     "n_qubits",
     "depth",

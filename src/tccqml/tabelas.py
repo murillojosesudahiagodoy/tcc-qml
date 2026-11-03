@@ -270,8 +270,9 @@ def _milhar(valor: int) -> str:
     return f"{int(valor):,}".replace(",", "\\,")
 
 
-# Contagens de portas que o Cap. 3 ("Métricas") promete, gravadas por `comparar` desde que
-# `COLUNAS_CUSTO` passou a incluí-las. Um `resumo.csv` anterior não as tem.
+# Contagens de portas que o Cap. 3 ("Métricas e critério de análise") promete, gravadas
+# por `comparar` desde que `COLUNAS_CUSTO` passou a incluí-las. Um `resumo.csv` anterior
+# não as tem.
 _PORTAS = ("gates_total", "gates_1q_encoding", "gates_2q_encoding", "gates_total_encoding")
 
 
@@ -309,8 +310,8 @@ def tab_custo(resumo: pd.DataFrame) -> tuple[pd.DataFrame, str]:
     """Recursos do bloco de codificação e do circuito completo, e custo por passo.
 
     O bloco de codificação e o circuito completo vêm em grupos separados
-    (Cap. 3, "Métricas"): profundidade, portas totais e portas de dois qubits de cada
-    um, mais os qubits do circuito. As contagens de hardware vêm em colunas
+    (Cap. 3, "Métricas e critério de análise"): profundidade, portas totais e portas
+    de dois qubits de cada um, mais os qubits do circuito. As contagens de hardware vêm em colunas
     separadas: avaliações do circuito (quantos circuitos distintos por passo)
     e shots (quantas execuções). As 2p avaliações deslocadas ficam ao lado
     para comparação com a regra de deslocamento, mas o custo do gradiente é 2p + 1 por

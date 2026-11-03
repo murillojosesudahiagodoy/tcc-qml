@@ -117,12 +117,13 @@ def test_custo_por_passo_do_angle_com_o_protocolo_padrao():
 
 
 # --------------------------------------------------------------------------
-# Cap. 3, "Métricas" — bloco de codificação e circuito completo, separados
+# Cap. 3, "Métricas e critério de análise" — bloco de codificação e circuito
+# completo, separados
 # --------------------------------------------------------------------------
 
 
 def test_contagens_do_angle_bloco_e_circuito_completo():
-    """Angle com L_var = 2 e d = 2: o que o Cap. 3 ("Métricas") manda reportar.
+    """Angle com L_var = 2 e d = 2: o que "Métricas e critério de análise" manda reportar.
 
     O bloco de codificação são dois RY em paralelo (2 portas, profundidade 1,
     nenhuma CNOT); as 4 CNOTs do circuito completo são todas do ansatz.
@@ -149,7 +150,7 @@ def test_portas_totais_somam_1q_e_2q(encoding):
 
 
 def test_colunas_de_custo_cobrem_a_secao_3_8():
-    """O CSV da grade grava o que o Cap. 3 ("Métricas") promete, para os dois níveis."""
+    """O CSV da grade grava o que "Métricas e critério de análise" promete, nos dois níveis."""
     from tccqml.experiments import COLUNAS_CUSTO
 
     for coluna in ("n_qubits", "depth", "gates_total", "gates_2q",

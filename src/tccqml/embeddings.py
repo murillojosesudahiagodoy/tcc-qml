@@ -13,7 +13,7 @@ O contrato é o da dataclass ``Encoding``:
   (dados e camadas treináveis intercalados) e o ansatz não deve ser chamado
   depois — é o caso do data re-uploading (Cap. 2, "Data re-uploading");
 - ``apply_dados`` isola o bloco de dados, para medir a profundidade da
-  codificação separadamente da profundidade total (Cap. 3, "Métricas").
+  codificação separadamente da profundidade total (Cap. 3, "Métricas e critério de análise").
 
 Registrar uma codificação nova em ``ENCODINGS`` basta para ela aparecer na
 linha de comando e poder entrar na grade de experimentos — não há nenhuma
