@@ -11,10 +11,14 @@ nunca entra na comparação principal.
 
 Com dois qubits e leitura de Z_0, o par de CNOTs que encerra cada camada do
 ``strongly_entangling`` leva Z_0 a Z_1 (CNOT_{1->0} CNOT_{0->1}, na imagem de
-Heisenberg). Por isso a ``Rot`` da última camada no qubit 0 não afeta a saída:
-3 dos 12 parâmetros da configuração de referência têm derivada identicamente
-nula. Eles continuam contados em `p`, porque fazem parte do circuito e seriam
-avaliados pelo parameter-shift (ver `test_rot_final_do_qubit_0_e_inerte`).
+Heisenberg). Por isso a ``Rot`` da última camada no qubit 0 não afeta a saída;
+o ângulo omega da última ``Rot`` do qubit 1, aplicado por último, comuta com Z_1;
+e o par de CNOTs leva X_1, Y_1 e Z_1 a operadores com só 1 ou Z no qubit 1, o
+que torna inerte também o omega do qubit 1 na penúltima camada. Ao todo, 5 dos
+12 parâmetros da configuração de referência têm derivada identicamente nula (7
+efetivos); com uma única camada, 4 dos 6. Eles continuam contados em `p`,
+porque fazem parte do circuito e seriam avaliados pelo parameter-shift (ver
+`test_rot_final_do_qubit_0_e_inerte` e `test_parametros_inertes`).
 """
 
 from collections.abc import Callable

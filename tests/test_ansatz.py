@@ -141,6 +141,35 @@ def test_rot_final_do_qubit_0_e_inerte(encoding, kwargs):
     assert np.allclose(clf.circuit(X, w, None), clf.circuit(X, alterado, None), atol=1e-12)
 
 
+@pytest.mark.parametrize(
+    "encoding, L_var, inertes",
+    [
+        # (camada, qubit, ângulo de Rot(phi, theta, omega)): a Rot final do qubit 0 e
+        # os omega do qubit 1 na última e na penúltima camada.
+        ("angle", 2, {(0, 1, 2), (1, 0, 0), (1, 0, 1), (1, 0, 2), (1, 1, 2)}),
+        ("zz", 2, {(0, 1, 2), (1, 0, 0), (1, 0, 1), (1, 0, 2), (1, 1, 2)}),
+        # Uma camada: a Rot do qubit 0 e o omega do qubit 1.
+        ("angle", 1, {(0, 0, 0), (0, 0, 1), (0, 0, 2), (0, 1, 2)}),
+    ],
+)
+def test_parametros_inertes(encoding, L_var, inertes):
+    """5 dos 12 parâmetros da configuração de referência são inertes; 4 dos 6 com L_var = 1.
+
+    É a contagem do Cap. 2 ("O ansatz variacional"): os parâmetros de derivada
+    identicamente nula são exatamente esses, para pesos aleatórios e vários pontos.
+    """
+    clf = model.build(encoding, n_features=2, L_var=L_var)
+    rng = np.random.default_rng(11)
+    X = pnp.array(rng.uniform(0, np.pi, size=(20, 2)), requires_grad=False)
+    nulos = None
+    for _ in range(3):
+        w = pnp.array(rng.normal(0.0, 1.0, size=clf.weights_shape), requires_grad=True)
+        jac = qml.jacobian(lambda pesos: clf.circuit(X, pesos, None))(w)
+        zerado = np.abs(jac).max(axis=0) < 1e-12
+        nulos = zerado if nulos is None else nulos & zerado
+    assert {tuple(int(i) for i in idx) for idx in np.argwhere(nulos)} == inertes
+
+
 def test_uma_camada_ignora_o_primeiro_atributo():
     """Com L_var = 1 (ou R = 1), a saída não depende de x_1: só do qubit 1.
 
